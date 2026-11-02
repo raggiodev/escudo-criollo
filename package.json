@@ -1,0 +1,36 @@
+{
+  "name": "escudo-criollo",
+  "version": "0.1.0",
+  "description": "Escudo Criollo (by Raggiodev) — Protección local en tiempo real contra tiendas online truchas, sellos Data Fiscal ARCA/AFIP falsificados, CUITs inválidos y enlaces con rastreadores.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "compile": "tsc --noEmit",
+    "icons": "node scripts/generate-icons.mjs",
+    "verify": "tsx scripts/verify-core.ts",
+    "postinstall": "wxt prepare"
+  },
+  "dependencies": {
+    "lucide-react": "^0.475.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^21.1.7",
+    "@types/node": "^22.13.4",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@wxt-dev/module-react": "^1.1.5",
+    "autoprefixer": "^10.4.20",
+    "jsdom": "^26.0.0",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
+    "wxt": "^0.19.29"
+  }
+}
+

@@ -1,0 +1,378 @@
+import assert from 'node:assert/strict';
+import { JSDOM } from 'jsdom';
+import {
+  extractCUITsFromText,
+  formatCUIT,
+  inspectDataFiscalDOM,
+  isValidCUIT,
+  validateCUIT,
+} from '../src/modules/v01-cuit-arca/validator';
+import { sanitizeUrl } from '../src/modules/v01-clean-links/sanitizer';
+import {
+  auditStoreSecurity,
+  detectEcommerceContext,
+} from '../src/modules/v01-store-heuristics/detector';
+import {
+  MAX_FIELD_LENGTH,
+  parseSafeHttpUrl,
+  safeTruncate,
+} from '../src/types';
+
+function createDoc(html: string, url: string): Document {
+  const dom = new JSDOM(html, { url });
+  return dom.window.document;
+}
+
+let passedTests = 0;
+
+function runTest(name: string, fn: () => void): void {
+  try {
+    fn();
+    passedTests++;
+    console.log(`  ✅ ${name}`);
+  } catch (err) {
+    console.error(`  ❌ FALLÓ: ${name}`);
+    throw err;
+  }
+}
+
+async function main(): Promise<void> {
+  console.log('\n🛡️  ESCUDO CRIOLLO v0.1.0 (by Raggiodev) — Suite de Verificación Forense\n');
+
+  // =========================================================================
+  // 1. ENGINE 1: CUIT MODULO 11 & FORENSIC DATA FISCAL
+  // =========================================================================
+  console.log('▶ Motor 1: Validación Matemática Módulo 11 (CUIT/CUIL) y Sello F.960 ARCA/AFIP');
+
+  runTest('Valida CUITs reales argentinos (MercadoLibre, ARCA, BNA)', () => {
+    assert.equal(isValidCUIT('30-70308853-4'), true);
+    assert.equal(isValidCUIT('30703088534'), true);
+    assert.equal(isValidCUIT('33-69345023-9'), true);
+    assert.equal(isValidCUIT('30-50001091-2'), true);
+    assert.equal(formatCUIT('30703088534'), '30-70308853-4');
+
+    const mlResult = validateCUIT('30-70308853-4');
+    assert.equal(mlResult.isValid, true);
+    assert.equal(mlResult.entityType, 'PERSONA_JURIDICA');
+  });
+
+  runTest('Rechaza CUITs con dígito verificador Módulo 11 erróneo', () => {
+    assert.equal(isValidCUIT('30-70308853-9'), false);
+    assert.equal(isValidCUIT('30-70308853-0'), false);
+    assert.equal(isValidCUIT('33-69345023-1'), false);
+  });
+
+  runTest('Rechaza secuencias repetitivas/triviales y prefijos inexistentes', () => {
+    assert.equal(isValidCUIT('20000000001'), false);
+    assert.equal(isValidCUIT('20-00000000-1'), false);
+    assert.equal(isValidCUIT('30-11111111-8'), false);
+    assert.equal(isValidCUIT('99-70308853-4'), false);
+    assert.equal(isValidCUIT('12-34567890-1'), false);
+    assert.equal(isValidCUIT('30-7030885-4'), false);
+  });
+
+  runTest('Extrae y deduplica CUITs válidos e inválidos respetando límite de 150 KB', () => {
+    const sampleFooter = `
+      Razón Social: Ejemplo S.R.L. - CUIT: 30-70308853-4
+      Copia repetida: 30703088534
+      CUIT trucho inventado: CUIT: 30-70308853-9
+    `;
+    const extracted = extractCUITsFromText(sampleFooter);
+    assert.equal(extracted.length, 2);
+    assert.equal(extracted[0]?.formatted, '30-70308853-4');
+    assert.equal(extracted[0]?.isValid, true);
+    assert.equal(extracted[1]?.formatted, '30-70308853-9');
+    assert.equal(extracted[1]?.isValid, false);
+
+    // Performance & 150 KB cap verification: CUIT placed at 200 KB must be ignored
+    const hugePadding = 'A'.repeat(180_000);
+    const beyondCapText = `${hugePadding} CUIT: 33-69345023-9`;
+    const start = performance.now();
+    const cappedExtracted = extractCUITsFromText(beyondCapText);
+    const elapsed = performance.now() - start;
+    assert.equal(cappedExtracted.length, 0);
+    assert.ok(elapsed < 100, `Extracción excedió presupuesto de tiempo (${elapsed}ms)`);
+  });
+
+  runTest('Detecta QR Data Fiscal F.960 oficial vs. Sello estático trucho vs. palabra "marca"', () => {
+    // Case A: Verified Official QR
+    const officialDoc = createDoc(
+      `<footer>
+        <a href="http://qr.afip.gob.ar/?qr=Z0JiTlN1R01WamN6,," target="_blank">
+          <img src="/assets/datafiscal.png" alt="Formulario 960 Data Fiscal" />
+        </a>
+      </footer>`,
+      'https://mitiendareal.com.ar/',
+    );
+    const officialAudit = inspectDataFiscalDOM(officialDoc);
+    assert.equal(officialAudit.status, 'VERIFIED_OFFICIAL_QR');
+    assert.ok(officialAudit.officialQrUrl?.includes('qr.afip.gob.ar'));
+
+    // Case B1: Static unlinked Data Fiscal image
+    const forgedStaticDoc = createDoc(
+      `<footer>
+        <img src="https://tiendatrucha.mitiendanube.com/img/sello-afip-data-fiscal.jpg" alt="AFIP" />
+      </footer>`,
+      'https://tiendatrucha.mitiendanube.com/',
+    );
+    const forgedStaticAudit = inspectDataFiscalDOM(forgedStaticDoc);
+    assert.equal(forgedStaticAudit.status, 'FORGED_STATIC_SEAL');
+
+    // Case B2: Data Fiscal image wrapped in dead href="#" or generic homepage without query
+    const forgedDeadLinkDoc = createDoc(
+      `<footer>
+        <a href="javascript:void(0)"><img src="/img/qr_arca.webp" alt="Data Fiscal ARCA" /></a>
+      </footer>`,
+      'https://estafa-outlet.myshopify.com/',
+    );
+    assert.equal(inspectDataFiscalDOM(forgedDeadLinkDoc).status, 'FORGED_STATIC_SEAL');
+
+    // Case C: Normal store with "nuestras-marcas.png" must NOT false-positive on "arca"
+    const brandImagesDoc = createDoc(
+      `<main><img src="/banners/nuestras_marcas.png" alt="Marca Oficial" /></main>`,
+      'https://deportes.com.ar/',
+    );
+    assert.equal(inspectDataFiscalDOM(brandImagesDoc).status, 'MISSING_DATA_FISCAL');
+  });
+
+  // =========================================================================
+  // 2. ENGINE 3: ANTI-TRACKING LINK SANITIZER
+  // =========================================================================
+  console.log('\n▶ Motor 3: Sanitizador de Enlaces Anti-Rastreo y Whitelist de Protocolos');
+
+  runTest('Limpia parámetros y hash #polycard_client de MercadoLibre', () => {
+    const dirtyMl =
+      'https://articulo.mercadolibre.com.ar/MLA-1425364758-termo-acero-_JM?matt_tool=883219&matt_word=oferta&tracking_id=9f8e7d&DEAL_ID=MLA123&V=2&T=abc#polycard_client=search-nordic&position=2&tracking_id=9f8e7d';
+    const res = sanitizeUrl(dirtyMl);
+    assert.equal(res.isValidHttpUrl, true);
+    assert.equal(res.isModified, true);
+    assert.equal(
+      res.cleanUrl,
+      'https://articulo.mercadolibre.com.ar/MLA-1425364758-termo-acero-_JM',
+    );
+    assert.ok(res.removedCount >= 7);
+    assert.ok(res.removedParams.includes('matt_tool'));
+    assert.ok(res.removedParams.includes('#polycard_client'));
+  });
+
+  runTest('Limpia enlaces de Instagram, Facebook, X y preserva timestamps de YouTube', () => {
+    const dirtyIg =
+      'https://www.instagram.com/reel/C9xYz123AbC/?igsh=MzRlODBiNWFlZA==&utm_source=ig_web_copy_link';
+    const cleanIg = sanitizeUrl(dirtyIg);
+    assert.equal(cleanIg.cleanUrl, 'https://www.instagram.com/reel/C9xYz123AbC/');
+    assert.equal(cleanIg.removedCount, 2);
+
+    // YouTube: MUST keep ?v=... and timestamp ?t=125s, while stripping si & feature
+    const dirtyYt =
+      'https://www.youtube.com/watch?v=dQw4w9WgXcQ&si=9x8y7z6w&feature=shared&t=125s';
+    const cleanYt = sanitizeUrl(dirtyYt);
+    assert.equal(
+      cleanYt.cleanUrl,
+      'https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=125s',
+    );
+
+    // X / Twitter: MUST strip ?s=20 and tracking ?t=token
+    const dirtyX =
+      'https://x.com/raggiodev/status/185000111222?s=20&t= RandomTrackerToken99'.replace(
+        ' ',
+        '',
+      );
+    const cleanX = sanitizeUrl(dirtyX);
+    assert.equal(cleanX.cleanUrl, 'https://x.com/raggiodev/status/185000111222');
+  });
+
+  runTest('Bloquea protocolos peligrosos (javascript:, data:, vbscript:, file:)', () => {
+    for (const malicious of [
+      'javascript:alert(document.domain)',
+      'JAVASCRIPT:fetch("https://evil.tld")',
+      'data:text/html,<script>alert(1)</script>',
+      'vbscript:msgbox(1)',
+      'file:///C:/Windows/System32/drivers/etc/hosts',
+    ]) {
+      assert.equal(parseSafeHttpUrl(malicious), null);
+      const res = sanitizeUrl(malicious);
+      assert.equal(res.isValidHttpUrl, false);
+      assert.equal(res.cleanUrl, '');
+    }
+  });
+
+  // =========================================================================
+  // 3. ENGINE 2: E-COMMERCE DETECTOR, SCAM SCORER & ZERO-TRUST DEFENSES
+  // =========================================================================
+  console.log('\n▶ Motor 2: Heurísticas Anti-Estafas de Tiendas y Defensas Zero-Trust');
+
+  runTest('Califica SAFE a tienda argentina verificada con CUIT válido, QR F.960 y .com.ar', () => {
+    const legitHtml = `
+      <!doctype html>
+      <html>
+        <head>
+          <title>Mate & Campo Oficial</title>
+          <script src="https://cdn.tiendanube.com/assets/store.js"></script>
+        </head>
+        <body>
+          <main>
+            <h1>Termo Media Manija</h1>
+            <p class="price">$ 64.900</p>
+            <button>Agregar al carrito</button>
+          </main>
+          <footer>
+            <p>Mate y Campo S.R.L. - CUIT: 30-70308853-4</p>
+            <p>Av. Corrientes 1850, CABA - WhatsApp: +54 9 11 4455-6677</p>
+            <a href="https://www.instagram.com/mateycampo.ar">Instagram</a>
+            <a href="https://qr.afip.gob.ar/?qr=eyJ2ZXIiOjEsImN1aXQiOjMwNzAzMDg4NTM0fQ==">
+              <img src="/img/data-fiscal.png" alt="Data Fiscal AFIP" />
+            </a>
+          </footer>
+        </body>
+      </html>
+    `;
+    const doc = createDoc(legitHtml, 'https://www.mateycampo.com.ar/productos/termo');
+    const ctx = detectEcommerceContext(doc, doc.URL);
+    assert.equal(ctx.isEcommerce, true);
+    assert.equal(ctx.platform, 'TIENDANUBE');
+
+    const report = auditStoreSecurity(doc, doc.URL);
+    assert.equal(report.riskLevel, 'SAFE');
+    assert.ok(report.trustScore >= 85, `Score esperado >= 85, recibido ${report.trustScore}`);
+    assert.equal(report.pillHeadline, 'Tienda Verificada · CUIT OK');
+  });
+
+  runTest('Califica WARNING a tienda informal sin CUIT ni Data Fiscal (sin señales truchas)', () => {
+    const informalHtml = `
+      <!doctype html>
+      <html>
+        <head><title>Indumentaria Barrial</title></head>
+        <body class="woocommerce">
+          <main>
+            <span class="amount">$ 28.500</span>
+            <button>Agregar al carrito</button>
+          </main>
+          <footer>
+            <p>Av. Santa Fe 3200, Buenos Aires - Teléfono 11 5544-3322</p>
+            <a href="https://www.instagram.com/indumentariabarrial">Seguinos en Instagram</a>
+          </footer>
+        </body>
+      </html>
+    `;
+    const doc = createDoc(informalHtml, 'https://indumentariabarrial.com/remera');
+    const report = auditStoreSecurity(doc, doc.URL);
+    assert.equal(report.ecommerce.platform, 'WOOCOMMERCE');
+    assert.equal(report.riskLevel, 'WARNING');
+    assert.equal(report.pillHeadline, 'Precaución · Sin Data Fiscal');
+  });
+
+  runTest('Califica DANGER (Alerta máxima) a tienda trucha con subdominio gratis + 50% transferencia + sello y CUIT falsos', () => {
+    const scamHtml = `
+      <!doctype html>
+      <html>
+        <head><title>Zapatillas Importadas Outlet</title></head>
+        <body>
+          <header class="promo-banner">
+            🔥 ¡LIQUIDACIÓN TOTAL! 50% OFF por transferencia bancaria y 2x1 en toda la tienda 🔥
+          </header>
+          <main>
+            <p>$ 39.990</p>
+            <button>Comprar ahora</button>
+          </main>
+          <footer>
+            <p>CUIT: 30-70308853-9</p>
+            <a href="#" aria-label="Instagram"><img src="/icons/instagram.svg" alt="Instagram" /></a>
+            <a href="https://instagram.com/">Nuestro IG</a>
+            <img src="/assets/datafiscal_afip.png" alt="Sello Data Fiscal AFIP" />
+          </footer>
+        </body>
+      </html>
+    `;
+    const doc = createDoc(
+      scamHtml,
+      'https://zapatillas-outlet-oficial.mitiendanube.com/',
+    );
+    const report = auditStoreSecurity(doc, doc.URL);
+    assert.equal(report.riskLevel, 'DANGER');
+    assert.ok(report.trustScore <= 15, `Score esperado <= 15, recibido ${report.trustScore}`);
+    assert.equal(report.pillHeadline, 'Alerta: Posible Tienda Trucha');
+
+    const findingIds = new Set(report.findings.map((f) => f.id));
+    assert.ok(findingIds.has('forged-data-fiscal-seal'));
+    assert.ok(findingIds.has('invalid-cuit-modulo11'));
+    assert.ok(findingIds.has('broken-footer-social-links'));
+    assert.ok(findingIds.has('free-subdomain-aggressive-transfer'));
+  });
+
+  runTest('Inmunidad ante DOM Clobbering, caracteres BiDi y truncamiento estricto <= 256 chars', () => {
+    const hostileTitle = `\u202E<script>alert("xss")</script>${'X'.repeat(600)}`;
+    const clobberedHtml = `
+      <!doctype html>
+      <html>
+        <head><title>${hostileTitle}</title></head>
+        <body>
+          <form id="footer">
+            <input name="URL" value="javascript:alert(1)" />
+            <input name="location" value="javascript:alert(1)" />
+          </form>
+        </body>
+      </html>
+    `;
+    const doc = createDoc(clobberedHtml, 'https://sitio-hostil.com/');
+    const report = auditStoreSecurity(doc, 'https://sitio-hostil.com/');
+
+    assert.ok(report.pageTitle.length <= MAX_FIELD_LENGTH);
+    assert.equal(report.pageTitle.includes('\u202E'), false);
+    assert.equal(safeTruncate('A'.repeat(500)).length, MAX_FIELD_LENGTH);
+  });
+
+  // =========================================================================
+  // 4. RUNTIME STORAGE & MESSAGE VALIDATION GUARDS
+  // =========================================================================
+  console.log('\n▶ Seguridad IPC & Storage: Validadores de Tipos en Tiempo de Ejecución');
+
+  // Provide minimal chrome mock before dynamic import of storage.ts (webextension-polyfill check)
+  (globalThis as Record<string, unknown>).chrome = {
+    runtime: { id: 'escudo-criollo-unit-test-id' },
+    storage: {
+      local: { get: async () => ({}), set: async () => undefined },
+      onChanged: { addListener: () => undefined, removeListener: () => undefined },
+    },
+  };
+
+  const storageMod = await import('../src/utils/storage');
+
+  runTest('Valida remitente Zero-Trust (sender.id === runtime.id) y rechaza payloads adulterados', () => {
+    assert.equal(
+      storageMod.isTrustedExtensionSender({ id: 'escudo-criollo-unit-test-id' }),
+      true,
+    );
+    assert.equal(
+      storageMod.isTrustedExtensionSender({ id: 'malicious-other-extension' }),
+      false,
+    );
+    assert.equal(storageMod.isTrustedExtensionSender(undefined), false);
+
+    assert.equal(storageMod.validateExtensionMessage({ type: 'UNKNOWN_CMD' }), null);
+    assert.equal(
+      storageMod.validateExtensionMessage({ type: 'REPORT_STORE_AUDIT', payload: {} }),
+      null,
+    );
+    assert.deepEqual(storageMod.validateExtensionMessage({ type: 'GET_TAB_AUDIT' }), {
+      type: 'GET_TAB_AUDIT',
+    });
+
+    const sanitizedSettings = storageMod.validateSettings({
+      showFloatingBadge: 'not-a-boolean',
+      badgePosition: 'top-center-invalid',
+      dismissedDomains: ['TIENDATRUCHA.COM', 12345, null],
+    });
+    assert.equal(sanitizedSettings.showFloatingBadge, true);
+    assert.equal(sanitizedSettings.badgePosition, 'bottom-left');
+    assert.deepEqual(sanitizedSettings.dismissedDomains, ['tiendatrucha.com']);
+  });
+
+  console.log(`\n✨ ÉXITO TOTAL: ${passedTests}/${passedTests} aserciones forenses verificadas con 0 errores.\n`);
+}
+
+try {
+  await main();
+} catch (err) {
+  console.error('\n💥 Error fatal en la verificación:', err);
+  process.exit(1);
+}

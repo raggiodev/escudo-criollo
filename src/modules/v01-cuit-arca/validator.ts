@@ -1,0 +1,478 @@
+import {
+  CuitEntityType,
+  CuitValidationResult,
+  DataFiscalAuditResult,
+  MAX_SCANNED_TEXT_CHARS,
+  MAX_URL_LENGTH,
+  parseSafeHttpUrl,
+  safeTruncate,
+} from '../../types';
+import {
+  getSafeAttr,
+  getSafeDocumentUrl,
+  isAnchorElement,
+  isHtmlElement,
+  isImageElement,
+} from '../../utils/dom-safety';
+
+const VALID_CUIT_PREFIXES = new Set([
+  '20',
+  '23',
+  '24',
+  '25',
+  '26',
+  '27',
+  '30',
+  '33',
+  '34',
+]);
+
+const MODULO_11_WEIGHTS = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2] as const;
+
+// Linear-time O(n) CUIT extraction patterns (zero nested quantifiers, zero catastrophic backtracking)
+const FORMATTED_CUIT_REGEX = /\b(20|23|24|25|26|27|30|33|34)([-\s]?)\d{8}\2\d\b/g;
+const LABELED_CUIT_REGEX =
+  /\bC\.?U\.?I\.?(?:T|L)\.?[:\s#º°.-]{0,6}(\d{2}[-\s.]?\d{8}[-\s.]?\d)\b/gi;
+
+// Linear-time O(n) Data Fiscal / ARCA / AFIP F.960 seal indicator (avoids matching "marca"/"barca")
+const DATA_FISCAL_SEAL_REGEX =
+  /(?:data[\s._-]{0,2}fiscal)|(?:(?:^|[^a-z0-9])(?:f\.?960|afip|arca)(?:$|[^a-z0-9]))/i;
+
+function classifyCuitPrefix(prefix: string): {
+  entityType: CuitEntityType;
+  entityLabel: string;
+} {
+  switch (prefix) {
+    case '20':
+      return {
+        entityType: 'PERSONA_HUMANA_MASC',
+        entityLabel: 'Persona Humana (Prefijo 20)',
+      };
+    case '27':
+      return {
+        entityType: 'PERSONA_HUMANA_FEM',
+        entityLabel: 'Persona Humana (Prefijo 27)',
+      };
+    case '23':
+    case '24':
+    case '25':
+    case '26':
+      return {
+        entityType: 'PERSONA_HUMANA_MIXTA',
+        entityLabel: `Persona Humana (Prefijo ${prefix})`,
+      };
+    case '30':
+    case '33':
+    case '34':
+      return {
+        entityType: 'PERSONA_JURIDICA',
+        entityLabel: `Empresa / Persona Jurídica (Prefijo ${prefix})`,
+      };
+    default:
+      return {
+        entityType: 'DESCONOCIDO',
+        entityLabel: `Prefijo no oficial (${prefix || '??'})`,
+      };
+  }
+}
+
+function isTrivialRepeatedMiddle(middleEight: string): boolean {
+  if (middleEight.length !== 8) {
+    return true;
+  }
+  // Rejects 00000000, 11111111, ..., 99999999 (e.g. 20000000001, 30-11111111-8)
+  const firstChar = middleEight[0];
+  let allSame = true;
+  for (let i = 1; i < 8; i++) {
+    if (middleEight[i] !== firstChar) {
+      allSame = false;
+      break;
+    }
+  }
+  if (allSame) {
+    return true;
+  }
+  // Rejects near-zero placeholder numbers like 00000001..00009999
+  const numericVal = Number(middleEight);
+  return !Number.isFinite(numericVal) || numericVal < 10_000;
+}
+
+function computeExpectedVerifier(firstTenDigits: string): number {
+  let sum = 0;
+  for (let i = 0; i < 10; i++) {
+    const digit = firstTenDigits.charCodeAt(i) - 48;
+    const weight = MODULO_11_WEIGHTS[i] ?? 0;
+    sum += digit * weight;
+  }
+  const remainder = sum % 11;
+  const diff = 11 - remainder;
+  if (diff === 11) {
+    return 0;
+  }
+  if (diff === 10) {
+    return 9;
+  }
+  return diff;
+}
+
+/**
+ * Formats an 11-digit CUIT string into standard Argentine XX-XXXXXXXX-X notation.
+ */
+export function formatCUIT(raw: string): string {
+  const safeRaw = typeof raw === 'string' ? raw.slice(0, 128) : '';
+  const digits = safeRaw.replace(/\D/g, '');
+  if (digits.length !== 11) {
+    return safeTruncate(safeRaw, 32);
+  }
+  return `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits.slice(10)}`;
+}
+
+/**
+ * Performs comprehensive Argentine CUIT/CUIL mathematical & structural validation.
+ */
+export function validateCUIT(raw: string): CuitValidationResult {
+  const safeRaw = safeTruncate(raw, 64);
+  const digits = safeRaw.replace(/\D/g, '');
+  const prefix = digits.slice(0, 2);
+  const { entityType, entityLabel } = classifyCuitPrefix(prefix);
+
+  if (digits.length !== 11) {
+    return {
+      raw: safeRaw,
+      digits,
+      formatted: formatCUIT(safeRaw),
+      prefix,
+      isValid: false,
+      entityType: 'DESCONOCIDO',
+      entityLabel: 'Longitud inválida',
+      reason: `Debe tener exactamente 11 dígitos numéricos (se detectaron ${digits.length}).`,
+    };
+  }
+
+  const formatted = `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits.slice(10)}`;
+
+  if (!VALID_CUIT_PREFIXES.has(prefix)) {
+    return {
+      raw: safeRaw,
+      digits,
+      formatted,
+      prefix,
+      isValid: false,
+      entityType: 'DESCONOCIDO',
+      entityLabel,
+      reason: `El prefijo "${prefix}" no existe en el padrón oficial de ARCA/AFIP.`,
+    };
+  }
+
+  const middleEight = digits.slice(2, 10);
+  if (isTrivialRepeatedMiddle(middleEight)) {
+    return {
+      raw: safeRaw,
+      digits,
+      formatted,
+      prefix,
+      isValid: false,
+      entityType,
+      entityLabel,
+      reason: 'CUIT apócrifo: contiene una secuencia repetitiva o ficticia de relleno.',
+    };
+  }
+
+  const expectedVerifier = computeExpectedVerifier(digits.slice(0, 10));
+  const actualVerifier = digits.charCodeAt(10) - 48;
+
+  if (actualVerifier !== expectedVerifier) {
+    return {
+      raw: safeRaw,
+      digits,
+      formatted,
+      prefix,
+      isValid: false,
+      entityType,
+      entityLabel,
+      reason: `Falla matemática Módulo 11: el dígito verificador debería ser ${expectedVerifier}, pero figura ${actualVerifier}.`,
+    };
+  }
+
+  return {
+    raw: safeRaw,
+    digits,
+    formatted,
+    prefix,
+    isValid: true,
+    entityType,
+    entityLabel,
+    reason: 'Dígito verificador Módulo 11 válido y prefijo oficial de ARCA/AFIP.',
+  };
+}
+
+/**
+ * Boolean convenience check for Modulo 11 + prefix + anti-trivial sequence CUIT validity.
+ */
+export function isValidCUIT(raw: string): boolean {
+  return validateCUIT(raw).isValid;
+}
+
+/**
+ * Scans bounded text (capped at 150 KB) for formatted or explicitly labeled CUIT strings.
+ * Deduplicates by 11-digit key and distinguishes valid CUITs from forged/invalid CUITs.
+ */
+export function extractCUITsFromText(text: string): CuitValidationResult[] {
+  if (typeof text !== 'string' || text.length === 0) {
+    return [];
+  }
+
+  const boundedText = text.slice(0, MAX_SCANNED_TEXT_CHARS);
+  const seenDigits = new Map<string, CuitValidationResult>();
+
+  // Pass 1: Explicitly labeled CUIT / CUIL mentions (catches even forged prefixes like CUIT: 99-12345678-1)
+  LABELED_CUIT_REGEX.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = LABELED_CUIT_REGEX.exec(boundedText)) !== null) {
+    const candidate = match[1];
+    if (!candidate) {
+      continue;
+    }
+    const digits = candidate.replace(/\D/g, '');
+    if (digits.length === 11 && !seenDigits.has(digits)) {
+      seenDigits.set(digits, validateCUIT(candidate));
+    }
+    if (seenDigits.size >= 25) {
+      break;
+    }
+  }
+
+  // Pass 2: Official-prefix 11-digit sequences (XX-XXXXXXXX-X, XX XXXXXXXX X, or XXXXXXXXXXX)
+  FORMATTED_CUIT_REGEX.lastIndex = 0;
+  while (seenDigits.size < 25 && (match = FORMATTED_CUIT_REGEX.exec(boundedText)) !== null) {
+    const candidate = match[0];
+    const startIdx = match.index;
+    // Guard against matching inside wa.me/phone URLs if unseparated
+    const precedingContext = boundedText
+      .slice(Math.max(0, startIdx - 12), startIdx)
+      .toLowerCase();
+    const isPhoneContext =
+      !candidate.includes('-') &&
+      (precedingContext.includes('+54') ||
+        precedingContext.includes('tel') ||
+        precedingContext.includes('wa.me'));
+    if (isPhoneContext) {
+      continue;
+    }
+
+    const digits = candidate.replace(/\D/g, '');
+    if (digits.length === 11 && !seenDigits.has(digits)) {
+      seenDigits.set(digits, validateCUIT(candidate));
+    }
+  }
+
+  return Array.from(seenDigits.values());
+}
+
+function isOfficialArcaQrValidationUrl(url: URL): boolean {
+  const host = url.hostname.toLowerCase();
+  const isOfficialDomain =
+    host === 'afip.gob.ar' ||
+    host.endsWith('.afip.gob.ar') ||
+    host === 'arca.gob.ar' ||
+    host.endsWith('.arca.gob.ar');
+
+  if (!isOfficialDomain) {
+    return false;
+  }
+
+  // Must carry at least one non-empty query parameter (e.g., ?qr=... or publicInfoD.aspx?p=...)
+  let hasNonEmptyQueryValue = false;
+  url.searchParams.forEach((value) => {
+    if (value.trim().length > 0) {
+      hasNonEmptyQueryValue = true;
+    }
+  });
+
+  if (!hasNonEmptyQueryValue) {
+    return false;
+  }
+
+  const pathLower = url.pathname.toLowerCase();
+  const isQrHostOrPath =
+    host.startsWith('qr.') ||
+    host.startsWith('serviciosweb.') ||
+    host.startsWith('servicios1.') ||
+    pathLower.includes('qr') ||
+    pathLower.includes('publicinfod') ||
+    pathLower.includes('datafiscal') ||
+    url.searchParams.has('qr');
+
+  return isQrHostOrPath;
+}
+
+function isSealMentionedInString(value: string): boolean {
+  if (!value) {
+    return false;
+  }
+  return DATA_FISCAL_SEAL_REGEX.test(value.slice(0, 512));
+}
+
+/**
+ * Forensic DOM inspector for Argentine F.960 Data Fiscal QR seals.
+ * Detects genuine clickable ARCA/AFIP validation links vs. forged static/broken scam seals.
+ */
+export function inspectDataFiscalDOM(
+  doc: Document,
+  explicitPageUrl?: string,
+): DataFiscalAuditResult {
+  const baseUrlObj = getSafeDocumentUrl(doc, explicitPageUrl);
+  const baseUrlStr = baseUrlObj ? baseUrlObj.href : 'https://localhost/';
+  const pageHost = baseUrlObj ? baseUrlObj.hostname.toLowerCase() : '';
+
+  // If the user is browsing an official .gob.ar government site itself, don't flag its own AFIP/ARCA logos as forged
+  const isGovPortal = pageHost === 'gob.ar' || pageHost.endsWith('.gob.ar');
+
+  const verifiedAnchors = new Set<HTMLAnchorElement>();
+  let firstOfficialQrUrl: string | null = null;
+
+  // Step 1: Inspect all <a> elements safely (capped at 1,500 anchors to guarantee main-thread safety)
+  const anchorNodes = doc.querySelectorAll('a');
+  const maxAnchors = Math.min(anchorNodes.length, 1500);
+
+  for (let i = 0; i < maxAnchors; i++) {
+    const node = anchorNodes[i];
+    if (!isAnchorElement(node, doc)) {
+      continue;
+    }
+    const rawHref = node.getAttribute('href');
+    if (!rawHref) {
+      continue;
+    }
+    const parsed = parseSafeHttpUrl(rawHref, baseUrlStr);
+    if (parsed && isOfficialArcaQrValidationUrl(parsed)) {
+      verifiedAnchors.add(node);
+      if (!firstOfficialQrUrl) {
+        firstOfficialQrUrl = safeTruncate(parsed.href, MAX_URL_LENGTH);
+      }
+    }
+  }
+
+  if (firstOfficialQrUrl) {
+    return {
+      status: 'VERIFIED_OFFICIAL_QR',
+      officialQrUrl: firstOfficialQrUrl,
+      forgedEvidence: null,
+      summary:
+        'Sello F.960 Data Fiscal oficial detectado con enlace verificable a ARCA/AFIP.',
+    };
+  }
+
+  if (isGovPortal) {
+    return {
+      status: 'MISSING_DATA_FISCAL',
+      officialQrUrl: null,
+      forgedEvidence: null,
+      summary: 'Portal gubernamental oficial (.gob.ar).',
+    };
+  }
+
+  // Step 2: Check for FORGED_STATIC_SEAL on <img> elements (static pasted seal or wrapped in fake/dead <a>)
+  const imgNodes = doc.querySelectorAll('img');
+  const maxImages = Math.min(imgNodes.length, 1000);
+
+  for (let i = 0; i < maxImages; i++) {
+    const node = imgNodes[i];
+    if (!isImageElement(node, doc)) {
+      continue;
+    }
+
+    const rawSrc = getSafeAttr(node, 'src', 512);
+    const rawDataSrc =
+      getSafeAttr(node, 'data-src', 512) || getSafeAttr(node, 'srcset', 512);
+    const rawAlt = getSafeAttr(node, 'alt', 256);
+    const rawTitle = getSafeAttr(node, 'title', 256);
+
+    const mentionsDataFiscal =
+      isSealMentionedInString(rawSrc) ||
+      isSealMentionedInString(rawDataSrc) ||
+      isSealMentionedInString(rawAlt) ||
+      isSealMentionedInString(rawTitle);
+
+    if (!mentionsDataFiscal) {
+      continue;
+    }
+
+    // Check if wrapped by a verified official QR <a>
+    const parentAnchor = node.closest('a');
+    if (parentAnchor && isAnchorElement(parentAnchor, doc) && verifiedAnchors.has(parentAnchor)) {
+      continue;
+    }
+
+    let wrapperDetail = 'imagen estática sin enlace oficial';
+    if (parentAnchor && isAnchorElement(parentAnchor, doc)) {
+      const rawWrapperHref = (parentAnchor.getAttribute('href') ?? '').trim();
+      if (
+        rawWrapperHref === '' ||
+        rawWrapperHref === '#' ||
+        rawWrapperHref.toLowerCase().startsWith('javascript:')
+      ) {
+        wrapperDetail = `enlace vacío o desactivado (href="${safeTruncate(rawWrapperHref || '#', 48)}")`;
+      } else {
+        const parsedWrapper = parseSafeHttpUrl(rawWrapperHref, baseUrlStr);
+        if (parsedWrapper) {
+          wrapperDetail = `apunta a "${safeTruncate(parsedWrapper.hostname + parsedWrapper.pathname, 80)}" sin validación QR de ARCA/AFIP`;
+        } else {
+          wrapperDetail = 'enlace con protocolo bloqueado o inválido';
+        }
+      }
+    }
+
+    const labelSnippet = rawAlt || rawTitle || rawSrc.split('/').pop() || 'Data Fiscal';
+    return {
+      status: 'FORGED_STATIC_SEAL',
+      officialQrUrl: null,
+      forgedEvidence: safeTruncate(`${labelSnippet} (${wrapperDetail})`, 256),
+      summary:
+        '¡ALERTA! Se detectó una imagen de Data Fiscal / ARCA / AFIP pegada sin vínculo oficial válido (sello trucho o desactivado).',
+    };
+  }
+
+  // Step 3: Also check <a> links explicitly claiming to be "Data Fiscal" / "Formulario 960" that point nowhere or back to the store
+  for (let i = 0; i < maxAnchors; i++) {
+    const node = anchorNodes[i];
+    if (!isAnchorElement(node, doc) || !isHtmlElement(node, doc)) {
+      continue;
+    }
+    const anchorText = safeTruncate(node.textContent ?? '', 160);
+    const anchorTitle = getSafeAttr(node, 'title', 160);
+    const ariaLabel = getSafeAttr(node, 'aria-label', 160);
+
+    if (
+      /data[\s._-]{0,2}fiscal|formulario\s*960|\bf\.?960\b/i.test(
+        `${anchorText} ${anchorTitle} ${ariaLabel}`,
+      )
+    ) {
+      const rawHref = (node.getAttribute('href') ?? '').trim();
+      const parsed = parseSafeHttpUrl(rawHref, baseUrlStr);
+      if (!parsed || !isOfficialArcaQrValidationUrl(parsed)) {
+        const targetDesc = parsed
+          ? `${parsed.hostname}${parsed.pathname}`
+          : rawHref || '#';
+        return {
+          status: 'FORGED_STATIC_SEAL',
+          officialQrUrl: null,
+          forgedEvidence: safeTruncate(
+            `Enlace "Data Fiscal" falso -> ${targetDesc}`,
+            256,
+          ),
+          summary:
+            '¡ALERTA! El enlace de Data Fiscal F.960 no dirige al validador oficial de ARCA/AFIP.',
+        };
+      }
+    }
+  }
+
+  return {
+    status: 'MISSING_DATA_FISCAL',
+    officialQrUrl: null,
+    forgedEvidence: null,
+    summary: 'No se encontró código QR F.960 Data Fiscal de ARCA/AFIP en esta página.',
+  };
+}
+
