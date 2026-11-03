@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Check,
   ChevronDown,
+  ChevronRight,
   Copy,
   ExternalLink,
   Megaphone,
@@ -16,13 +17,16 @@ import {
   AuditFinding,
   ExtensionSettings,
   RiskLevel,
+  ScoreBreakdownItem,
   StoreAuditReport,
   ToastNotificationPayload,
 } from '../../src/types';
 import { copyTextSafely } from '../../src/utils/clipboard';
+import { buildSafeXAlertTweet } from '../../src/utils/share';
 
 const BCRA_DEUDORES_URL =
   'https://www.bcra.gob.ar/BCRAyVos/Situacion_Crediticia.asp';
+const RAGGIODEV_PORTFOLIO_URL = 'https://raggiodev.com';
 
 export interface ShieldOverlayProps {
   report: StoreAuditReport;
@@ -98,24 +102,23 @@ function getFindingIconLabel(severity: AuditFinding['severity']): string {
   }
 }
 
-function buildXAlertUrl(report: StoreAuditReport): string {
-  const verdictTag =
-    report.riskLevel === 'DANGER'
-      ? '🚨 Posible tienda online sospechosa'
-      : '⚠️ Precaución antes de transferir';
-  const topFindings = report.findings
-    .filter((f) => f.severity !== 'SAFE')
-    .slice(0, 2)
-    .map((f) => `• ${f.title}`)
-    .join('\n');
-
-  const tweetBody = `${verdictTag}: ${report.hostname} (Puntaje ${report.trustScore}/100)\n${
-    topFindings || '• Sin respaldo fiscal verificable'
-  }\n\nVerificá siempre CUIT y Data Fiscal antes de transferir.\nDetectado con 🛡️ Escudo Criollo by @raggiodev`;
-
-  const intent = new URL('https://x.com/intent/tweet');
-  intent.searchParams.set('text', tweetBody);
-  return intent.toString();
+function formatBreakdownDelta(item: ScoreBreakdownItem): {
+  text: string;
+  color: string;
+} {
+  const sign = item.delta > 0 ? '+' : '';
+  const text = `${sign}${item.delta}`;
+  switch (item.type) {
+    case 'base':
+      return { text, color: '#C4B5FD' };
+    case 'positive':
+      return { text, color: '#34D399' };
+    case 'negative':
+      return { text, color: '#F87171' };
+    case 'neutral':
+    default:
+      return { text, color: '#94A3B8' };
+  }
 }
 
 export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
@@ -126,7 +129,9 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
   onHideOnSite,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isAutoMinimized, setIsAutoMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const minimizedHostRef = useRef<string | null>(null);
+
   const [copiedCuit, setCopiedCuit] = useState<string | null>(null);
   const [cleanCopyStatus, setCleanCopyStatus] = useState<string | null>(null);
   const [liveAnnouncement, setLiveAnnouncement] = useState('');
@@ -139,17 +144,38 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
     !isDismissedOnDomain &&
     (report.ecommerce.isEcommerce || settings.alwaysShowBadge);
 
-  // Auto-minimize SAFE pill after 6 seconds so it never annoys the shopper
+  // Fast 2.5s Sticky Auto-Minimize for SAFE stores: never resets back to false on background re-scans of the same hostname
   useEffect(() => {
-    setIsAutoMinimized(false);
-    if (!shouldShowShield || report.riskLevel !== 'SAFE' || isExpanded) {
+    if (
+      minimizedHostRef.current &&
+      minimizedHostRef.current !== report.hostname
+    ) {
+      minimizedHostRef.current = null;
+      setIsMinimized(false);
+    }
+
+    if (report.riskLevel !== 'SAFE') {
+      minimizedHostRef.current = null;
+      setIsMinimized(false);
       return;
     }
+
+    if (minimizedHostRef.current === report.hostname) {
+      setIsMinimized(true);
+      return;
+    }
+
+    if (!shouldShowShield || isExpanded) {
+      return;
+    }
+
     const timer = window.setTimeout(() => {
-      setIsAutoMinimized(true);
-    }, 6000);
+      minimizedHostRef.current = report.hostname;
+      setIsMinimized(true);
+    }, 2500);
+
     return () => window.clearTimeout(timer);
-  }, [report.url, report.riskLevel, isExpanded, shouldShowShield]);
+  }, [report.hostname, report.riskLevel, isExpanded, shouldShowShield]);
 
   // Close expanded card on Escape key
   useEffect(() => {
@@ -205,7 +231,13 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
   };
 
   const primaryCuit = report.cuits[0] ?? null;
-  const xAlertUrl = useMemo(() => buildXAlertUrl(report), [report]);
+  const xAlertUrl = useMemo(
+    () =>
+      report.riskLevel === 'DANGER'
+        ? buildSafeXAlertTweet(report).intentUrl
+        : null,
+    [report],
+  );
 
   if (!shouldShowShield && !toast) {
     return null;
@@ -217,11 +249,7 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
       className="flex flex-col items-start gap-2.5 font-sans text-slate-100 select-none"
     >
       {/* Centralized Screen-Reader Polite Live Region */}
-      <div
-        aria-live="polite"
-        aria-atomic="true"
-        className="sr-only"
-      >
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
         {liveAnnouncement}
       </div>
 
@@ -323,14 +351,19 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
                         border: '1px solid rgba(251, 191, 36, 0.35)',
                       }}
                     >
-                      v0.1
+                      v0.1.1
                     </span>
                   </div>
                   <p className="text-2xs text-indigo-100/90 m-0 leading-tight">
-                    Auditoría Forense ·{' '}
-                    <span className="font-semibold text-raggio-goldLight">
-                      by Raggiodev
-                    </span>
+                    Auditoría Forense · by{' '}
+                    <a
+                      href={RAGGIODEV_PORTFOLIO_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-raggio-goldLight hover:underline"
+                    >
+                      Raggiodev
+                    </a>
                   </p>
                 </div>
               </div>
@@ -396,118 +429,172 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
           </header>
 
           {/* Body Content */}
-          <div className="p-3.5 space-y-3">
-            {/* CUIT & ARCA/AFIP Status Box */}
-            <div
-              className="rounded-xl border p-2.5 space-y-2"
-              style={{
-                backgroundColor: '#16122B',
-                borderColor: '#2B2354',
-              }}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-2xs font-semibold uppercase tracking-wider text-slate-400">
-                  CUIT &amp; Data Fiscal ARCA
-                </span>
-                <a
-                  href={BCRA_DEUDORES_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-2xs font-semibold text-raggio-gold hover:underline min-h-[24px]"
+          <div className="p-3.5 space-y-2.5">
+            {/* Collapsible Transparent Score Breakdown */}
+            {report.scoreBreakdown.length > 0 && (
+              <details
+                className="group rounded-xl border px-2.5 py-2"
+                style={{
+                  backgroundColor: '#16122B',
+                  borderColor: '#2B2354',
+                }}
+              >
+                <summary className="flex items-center justify-between gap-2 text-2xs font-semibold text-raggio-goldLight select-none min-h-[24px]">
+                  <span>📊 ¿De dónde sale este puntaje? (Desglose)</span>
+                  <ChevronRight
+                    className="h-3.5 w-3.5 shrink-0 text-raggio-gold transition-transform group-open:rotate-90"
+                    aria-hidden="true"
+                  />
+                </summary>
+                <ul
+                  role="list"
+                  className="mt-2 space-y-1 border-t border-raggio-border pt-2 m-0 p-0 list-none"
                 >
-                  <span>Central BCRA</span>
-                  <ExternalLink className="w-3 h-3" aria-hidden="true" />
-                </a>
-              </div>
-
-              {primaryCuit ? (
-                <div className="flex items-center justify-between gap-2 rounded-lg bg-raggio-canvas px-2.5 py-1.5 border border-raggio-border">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className="font-mono text-xs font-bold"
-                        style={{
-                          color: primaryCuit.isValid ? '#34D399' : '#F87171',
-                        }}
+                  {report.scoreBreakdown.map((item, idx) => {
+                    const formatted = formatBreakdownDelta(item);
+                    return (
+                      <li
+                        key={`${item.label}-${idx}`}
+                        className="flex items-center justify-between gap-2 text-2xs"
                       >
-                        {primaryCuit.formatted}
-                      </span>
-                      <span
-                        className="rounded px-1 py-0.5 font-mono text-2xs font-semibold border"
-                        style={
-                          primaryCuit.isValid
-                            ? {
-                                color: '#34D399',
-                                backgroundColor: 'rgba(6, 78, 59, 0.65)',
-                                borderColor: '#10B981',
-                              }
-                            : {
-                                color: '#F87171',
-                                backgroundColor: 'rgba(69, 10, 10, 0.75)',
-                                borderColor: '#EF4444',
-                              }
-                        }
-                      >
-                        {primaryCuit.isValid ? 'MÓD.11 OK' : 'INVÁLIDO'}
-                      </span>
-                    </div>
-                    <div className="truncate text-2xs text-slate-400 mt-0.5">
-                      {primaryCuit.entityLabel}
-                    </div>
-                  </div>
+                        <span className="text-slate-300 leading-snug">
+                          {item.label}
+                        </span>
+                        <span
+                          className="shrink-0 font-mono font-bold"
+                          style={{ color: formatted.color }}
+                        >
+                          {formatted.text}
+                        </span>
+                      </li>
+                    );
+                  })}
+                  <li className="flex items-center justify-between gap-2 border-t border-raggio-border/60 pt-1 text-2xs font-bold">
+                    <span className="text-slate-200">Puntaje Final (0–100)</span>
+                    <span
+                      className="font-mono"
+                      style={{ color: semaphore.dotColor }}
+                    >
+                      {report.trustScore}/100
+                    </span>
+                  </li>
+                </ul>
+              </details>
+            )}
 
-                  <button
-                    type="button"
-                    onClick={() => void handleCopyCuit(primaryCuit.formatted)}
-                    className="inline-flex shrink-0 items-center gap-1 rounded-md border border-raggio-border bg-raggio-hover px-2 py-1 text-2xs font-medium text-slate-200 hover:border-raggio-gold hover:text-raggio-gold transition-colors min-h-[26px]"
-                  >
-                    {copiedCuit === primaryCuit.formatted ? (
-                      <>
-                        <Check
-                          className="w-3 h-3 text-semaphore-safeText"
-                          aria-hidden="true"
-                        />
-                        <span>Copiado</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3 h-3" aria-hidden="true" />
-                        <span>Copiar CUIT</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              ) : (
-                <div className="rounded-lg bg-raggio-canvas px-2.5 py-1.5 border border-raggio-border font-mono text-2xs text-slate-400">
-                  Sin CUIT detectado en el pie de página
-                </div>
-              )}
-
-              {/* Data Fiscal Status Row */}
-              <div className="flex items-center justify-between gap-2 text-2xs pt-0.5">
-                <span className="text-slate-400">Formulario F.960 QR:</span>
-                {report.dataFiscal.status === 'VERIFIED_OFFICIAL_QR' &&
-                report.dataFiscal.officialQrUrl ? (
+            {/* CUIT & ARCA/AFIP Status Box */}
+            {report.ecommerce.platform !== 'ECOMMERCE_INTERNACIONAL' && (
+              <div
+                className="rounded-xl border p-2.5 space-y-2"
+                style={{
+                  backgroundColor: '#16122B',
+                  borderColor: '#2B2354',
+                }}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-2xs font-semibold uppercase tracking-wider text-slate-400">
+                    CUIT &amp; Data Fiscal ARCA
+                  </span>
                   <a
-                    href={report.dataFiscal.officialQrUrl}
+                    href={BCRA_DEUDORES_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 font-mono font-semibold text-semaphore-safeText hover:underline min-h-[24px]"
+                    className="inline-flex items-center gap-1 text-2xs font-semibold text-raggio-gold hover:underline min-h-[24px]"
                   >
-                    <span>QR Oficial Verificado</span>
+                    <span>Central BCRA</span>
                     <ExternalLink className="w-3 h-3" aria-hidden="true" />
                   </a>
-                ) : report.dataFiscal.status === 'FORGED_STATIC_SEAL' ? (
-                  <span className="font-mono font-bold text-semaphore-dangerText">
-                    🚨 Sello Trucho / Sin Link
-                  </span>
+                </div>
+
+                {primaryCuit ? (
+                  <div className="flex items-center justify-between gap-2 rounded-lg bg-raggio-canvas px-2.5 py-1.5 border border-raggio-border">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className="font-mono text-xs font-bold"
+                          style={{
+                            color: primaryCuit.isValid ? '#34D399' : '#F87171',
+                          }}
+                        >
+                          {primaryCuit.formatted}
+                        </span>
+                        <span
+                          className="rounded px-1 py-0.5 font-mono text-2xs font-semibold border"
+                          style={
+                            primaryCuit.isValid
+                              ? {
+                                  color: '#34D399',
+                                  backgroundColor: 'rgba(6, 78, 59, 0.65)',
+                                  borderColor: '#10B981',
+                                }
+                              : {
+                                  color: '#F87171',
+                                  backgroundColor: 'rgba(69, 10, 10, 0.75)',
+                                  borderColor: '#EF4444',
+                                }
+                          }
+                        >
+                          {primaryCuit.isValid ? 'MÓD.11 OK' : 'INVÁLIDO'}
+                        </span>
+                      </div>
+                      <div className="truncate text-2xs text-slate-400 mt-0.5">
+                        {primaryCuit.entityLabel}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => void handleCopyCuit(primaryCuit.formatted)}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-raggio-border bg-raggio-hover px-2 py-1 text-2xs font-medium text-slate-200 hover:border-raggio-gold hover:text-raggio-gold transition-colors min-h-[26px]"
+                    >
+                      {copiedCuit === primaryCuit.formatted ? (
+                        <>
+                          <Check
+                            className="w-3 h-3 text-semaphore-safeText"
+                            aria-hidden="true"
+                          />
+                          <span>Copiado</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" aria-hidden="true" />
+                          <span>Copiar CUIT</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 ) : (
-                  <span className="font-mono text-semaphore-warnText">
-                    No encontrado
-                  </span>
+                  <div className="rounded-lg bg-raggio-canvas px-2.5 py-1.5 border border-raggio-border font-mono text-2xs text-slate-400">
+                    Sin CUIT detectado en el pie de página
+                  </div>
                 )}
+
+                {/* Data Fiscal Status Row */}
+                <div className="flex items-center justify-between gap-2 text-2xs pt-0.5">
+                  <span className="text-slate-400">Formulario F.960 QR:</span>
+                  {report.dataFiscal.status === 'VERIFIED_OFFICIAL_QR' &&
+                  report.dataFiscal.officialQrUrl ? (
+                    <a
+                      href={report.dataFiscal.officialQrUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-mono font-semibold text-semaphore-safeText hover:underline min-h-[24px]"
+                    >
+                      <span>QR Oficial Verificado</span>
+                      <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                    </a>
+                  ) : report.dataFiscal.status === 'FORGED_STATIC_SEAL' ? (
+                    <span className="font-mono font-bold text-semaphore-dangerText">
+                      🚨 Sello Trucho / Sin Link
+                    </span>
+                  ) : (
+                    <span className="font-mono text-slate-400">
+                      No detectado en vista actual
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* List of Findings */}
             <div>
@@ -516,7 +603,7 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
               </h3>
               <ul
                 role="list"
-                className="raggio-scrollbar max-h-[195px] space-y-2 overflow-y-auto pr-1 m-0 p-0 list-none"
+                className="raggio-scrollbar max-h-[175px] space-y-2 overflow-y-auto pr-1 m-0 p-0 list-none"
               >
                 {report.findings.map((finding) => {
                   const borderMap: Record<AuditFinding['severity'], string> = {
@@ -577,26 +664,17 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
                   </span>
                 </button>
 
-                {(report.riskLevel === 'WARNING' ||
-                  report.riskLevel === 'DANGER') && (
+                {report.riskLevel === 'DANGER' && xAlertUrl && (
                   <a
                     href={xAlertUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border px-2.5 py-1.5 text-2xs font-semibold transition-colors min-h-[32px] no-underline"
-                    style={
-                      report.riskLevel === 'DANGER'
-                        ? {
-                            backgroundColor: 'rgba(69, 10, 10, 0.75)',
-                            borderColor: '#EF4444',
-                            color: '#F87171',
-                          }
-                        : {
-                            backgroundColor: 'rgba(69, 26, 3, 0.65)',
-                            borderColor: '#F59E0B',
-                            color: '#FBBF24',
-                          }
-                    }
+                    style={{
+                      backgroundColor: 'rgba(69, 10, 10, 0.75)',
+                      borderColor: '#EF4444',
+                      color: '#F87171',
+                    }}
                   >
                     <Megaphone className="w-3.5 h-3.5" aria-hidden="true" />
                     <span>Alertar en X</span>
@@ -605,7 +683,17 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
               </div>
 
               <div className="flex items-center justify-between text-2xs text-slate-400 pt-0.5">
-                <span className="font-mono">100% Local · Zero-Server</span>
+                <span>
+                  100% Local ·{' '}
+                  <a
+                    href={RAGGIODEV_PORTFOLIO_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-raggio-gold hover:underline"
+                  >
+                    Raggiodev
+                  </a>
+                </span>
                 <button
                   type="button"
                   onClick={() => {
@@ -623,24 +711,24 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
         </section>
       )}
 
-      {/* Collapsed "Steamcito-style" Floating Pill */}
+      {/* Collapsed "Steamcito-style" Floating Pill (Sticky 2.5s compact mode for SAFE sites) */}
       {shouldShowShield && (
         <button
           type="button"
           onClick={() => {
-            setIsAutoMinimized(false);
             setIsExpanded((prev) => !prev);
-          }}
-          onMouseEnter={() => {
-            if (isAutoMinimized) {
-              setIsAutoMinimized(false);
-            }
           }}
           aria-expanded={isExpanded}
           aria-label={`Escudo Criollo: ${report.pillHeadline}. Puntaje ${report.trustScore} de 100. Hacé clic para ver el diagnóstico forense.`}
           className={`group inline-flex items-center gap-2 rounded-full border transition-all duration-200 min-h-[38px] ${
-            report.riskLevel === 'DANGER' ? 'animate-danger-pulse' : 'shadow-raggio-card'
-          } ${isAutoMinimized && !isExpanded ? 'px-2.5 py-2 opacity-85 hover:opacity-100' : 'px-3.5 py-2'}`}
+            report.riskLevel === 'DANGER'
+              ? 'animate-danger-pulse'
+              : 'shadow-raggio-card'
+          } ${
+            isMinimized && !isExpanded
+              ? 'px-2 py-2 opacity-85 hover:opacity-100'
+              : 'px-3.5 py-2'
+          }`}
           style={{
             backgroundColor: '#0D0B18',
             borderColor: semaphore.pillBorder,
@@ -684,8 +772,8 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
             }}
           />
 
-          {/* Verdict Text (auto-minimizes after 6s when SAFE) */}
-          {(!isAutoMinimized || isExpanded) && (
+          {/* Verdict Text (hidden once sticky 2.5s minimize activates on SAFE sites) */}
+          {(!isMinimized || isExpanded) && (
             <span className="flex items-center gap-2 text-xs font-semibold tracking-tight text-slate-100">
               <span>
                 {report.riskLevel === 'DANGER'
@@ -707,4 +795,3 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
     </div>
   );
 };
-

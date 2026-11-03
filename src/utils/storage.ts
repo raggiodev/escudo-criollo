@@ -11,6 +11,8 @@ import {
   FindingSeverity,
   MAX_URL_LENGTH,
   RiskLevel,
+  ScoreBreakdownItem,
+  ScoreBreakdownType,
   StoreAuditReport,
   ToastNotificationPayload,
   safeTruncate,
@@ -35,6 +37,13 @@ const VALID_SEVERITIES = new Set<FindingSeverity>([
 const VALID_BADGE_POSITIONS = new Set<BadgePosition>([
   'bottom-left',
   'bottom-right',
+]);
+
+const VALID_BREAKDOWN_TYPES = new Set<ScoreBreakdownType>([
+  'base',
+  'positive',
+  'negative',
+  'neutral',
 ]);
 
 function isPlainRecord(val: unknown): val is Record<string, unknown> {
@@ -127,6 +136,26 @@ function validateFinding(raw: unknown): AuditFinding | null {
   };
 }
 
+function validateScoreBreakdownItem(raw: unknown): ScoreBreakdownItem | null {
+  if (!isPlainRecord(raw)) {
+    return null;
+  }
+  if (
+    typeof raw.label !== 'string' ||
+    typeof raw.delta !== 'number' ||
+    !Number.isFinite(raw.delta) ||
+    typeof raw.type !== 'string' ||
+    !VALID_BREAKDOWN_TYPES.has(raw.type as ScoreBreakdownType)
+  ) {
+    return null;
+  }
+  return {
+    label: safeTruncate(raw.label, 160),
+    delta: Math.max(-100, Math.min(100, Math.round(raw.delta))),
+    type: raw.type as ScoreBreakdownType,
+  };
+}
+
 function validateCuitItem(raw: unknown): CuitValidationResult | null {
   if (!isPlainRecord(raw)) {
     return null;
@@ -138,6 +167,13 @@ function validateCuitItem(raw: unknown): CuitValidationResult | null {
   ) {
     return null;
   }
+  const reason = safeTruncate(raw.reason, 220);
+  const errorReason =
+    typeof raw.errorReason === 'string'
+      ? safeTruncate(raw.errorReason, 220)
+      : !raw.isValid
+        ? reason
+        : undefined;
   return {
     raw: safeTruncate(raw.raw, 64),
     digits: safeTruncate(raw.digits, 16),
@@ -149,7 +185,8 @@ function validateCuitItem(raw: unknown): CuitValidationResult | null {
         ? (raw.entityType as CuitValidationResult['entityType'])
         : 'DESCONOCIDO',
     entityLabel: safeTruncate(raw.entityLabel, 120),
-    reason: safeTruncate(raw.reason, 220),
+    reason,
+    errorReason,
   };
 }
 
@@ -219,6 +256,16 @@ export function validateStoreAuditReport(raw: unknown): StoreAuditReport | null 
     return null;
   }
 
+  const scoreBreakdown: ScoreBreakdownItem[] = [];
+  if (Array.isArray(raw.scoreBreakdown)) {
+    for (const item of raw.scoreBreakdown.slice(0, 25)) {
+      const validBreakdown = validateScoreBreakdownItem(item);
+      if (validBreakdown) {
+        scoreBreakdown.push(validBreakdown);
+      }
+    }
+  }
+
   const cuits: CuitValidationResult[] = [];
   if (Array.isArray(raw.cuits)) {
     for (const item of raw.cuits.slice(0, 25)) {
@@ -250,6 +297,7 @@ export function validateStoreAuditReport(raw: unknown): StoreAuditReport | null 
         : Date.now(),
     ecommerce,
     trustScore: Math.max(0, Math.min(100, Math.round(raw.trustScore))),
+    scoreBreakdown,
     riskLevel: raw.riskLevel as RiskLevel,
     pillHeadline: safeTruncate(raw.pillHeadline, 120) || 'Escudo Criollo',
     cuits,
@@ -394,7 +442,6 @@ export async function saveTabAuditCache(
 
     existingMap[String(tabId)] = report;
 
-    // Evict oldest entries if map exceeds 20 tabs
     const entries = Object.entries(existingMap);
     if (entries.length > 20) {
       entries.sort((a, b) => {
@@ -427,4 +474,3 @@ export async function getCachedTabAudit(
     return null;
   }
 }
-

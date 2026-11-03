@@ -24,6 +24,8 @@ import {
 } from '../../src/utils/storage';
 import { ShieldOverlay } from './ShieldOverlay';
 
+const SPA_HYDRATION_CHECKPOINTS_MS = [600, 1600, 3200] as const;
+
 export default defineContentScript({
   matches: ['http://*/*', 'https://*/*'],
   runAt: 'document_idle',
@@ -47,10 +49,18 @@ export default defineContentScript({
     );
     let activeToast: ToastNotificationPayload | null = null;
     let toastTimer: number | null = null;
+    let hydrationTimers: number[] = [];
     let reactRoot: ReactDOM.Root | null = null;
     let activeShadowHost: HTMLElement | null = null;
     let remountCount = 0;
     const MAX_ANTI_TAMPER_REMOUNTS = 1;
+
+    const clearHydrationTimers = () => {
+      for (const timerId of hydrationTimers) {
+        window.clearTimeout(timerId);
+      }
+      hydrationTimers = [];
+    };
 
     const reportToBackground = async (report: StoreAuditReport) => {
       try {
@@ -86,6 +96,57 @@ export default defineContentScript({
           />
         </React.StrictMode>,
       );
+    };
+
+    /**
+     * SPA Hydration Grace Period:
+     * Re-scans at 600ms, 1600ms, and 3200ms when lazy-loaded SPAs (VTEX, Angular, Next.js)
+     * haven't yet mounted their footer Data Fiscal F.960 QR or CUIT during initial load.
+     */
+    const scheduleHydrationGraceScans = () => {
+      clearHydrationTimers();
+
+      if (
+        currentReport.ecommerce.platform === 'ECOMMERCE_INTERNACIONAL' ||
+        currentReport.riskLevel === 'DANGER'
+      ) {
+        return;
+      }
+
+      for (const delayMs of SPA_HYDRATION_CHECKPOINTS_MS) {
+        const timerId = window.setTimeout(() => {
+          window.requestAnimationFrame(() => {
+            if (ctx.isInvalid) {
+              return;
+            }
+            // Only re-audit if F.960 QR or CUIT hasn't been picked up yet
+            const needsHydrationCheck =
+              currentReport.dataFiscal.status === 'MISSING_DATA_FISCAL' ||
+              (!currentReport.ecommerce.isWhitelistedOfficial &&
+                currentReport.riskLevel === 'WARNING');
+
+            if (!needsHydrationCheck) {
+              return;
+            }
+
+            const refreshed = auditStoreSecurity(document, window.location.href);
+            const hasChanged =
+              refreshed.trustScore !== currentReport.trustScore ||
+              refreshed.riskLevel !== currentReport.riskLevel ||
+              refreshed.dataFiscal.status !== currentReport.dataFiscal.status ||
+              refreshed.cuits.length !== currentReport.cuits.length ||
+              refreshed.ecommerce.isEcommerce !==
+                currentReport.ecommerce.isEcommerce;
+
+            if (hasChanged) {
+              currentReport = refreshed;
+              renderUi();
+              void reportToBackground(currentReport);
+            }
+          });
+        }, delayMs);
+        hydrationTimers.push(timerId);
+      }
     };
 
     const showToast = (payload: ToastNotificationPayload) => {
@@ -127,6 +188,7 @@ export default defineContentScript({
 
     await mountClosedShadowUi();
     void reportToBackground(currentReport);
+    scheduleHydrationGraceScans();
 
     // Anti-Tampering MutationObserver: re-mounts once safely if a hostile page script deletes the host element
     const antiTamperObserver = new MutationObserver(() => {
@@ -192,7 +254,7 @@ export default defineContentScript({
     };
     document.addEventListener('copy', onDocumentCopy);
 
-    // SPA Navigation Watcher (MercadoLibre, Tiendanube, Shopify dynamic route transitions)
+    // SPA Navigation Watcher (MercadoLibre, CompraGamer, VTEX, Tiendanube, Shopify dynamic routes)
     let lastAuditedHref = window.location.href;
     let spaAuditTimer: number | null = null;
 
@@ -211,6 +273,7 @@ export default defineContentScript({
           currentReport = auditStoreSecurity(document, window.location.href);
           renderUi();
           void reportToBackground(currentReport);
+          scheduleHydrationGraceScans();
         });
       }, 350);
     };
@@ -276,6 +339,7 @@ export default defineContentScript({
     ctx.onInvalidated(() => {
       antiTamperObserver.disconnect();
       unsubscribeSettings();
+      clearHydrationTimers();
       document.removeEventListener('copy', onDocumentCopy);
       browser.runtime.onMessage.removeListener(onRuntimeMessage);
       if (toastTimer !== null) {

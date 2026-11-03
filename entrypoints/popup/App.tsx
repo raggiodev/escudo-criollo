@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check,
+  ChevronRight,
   ClipboardPaste,
   Copy,
   ExternalLink,
@@ -26,11 +27,13 @@ import {
   DEFAULT_SETTINGS,
   ExtensionSettings,
   RiskLevel,
+  ScoreBreakdownItem,
   StoreAuditReport,
   parseSafeHttpUrl,
   safeTruncate,
 } from '../../src/types';
 import { copyTextSafely } from '../../src/utils/clipboard';
+import { buildSafeXAlertTweet } from '../../src/utils/share';
 import {
   getCachedTabAudit,
   getSettings,
@@ -40,8 +43,13 @@ import {
 
 const BCRA_DEUDORES_URL =
   'https://www.bcra.gob.ar/BCRAyVos/Situacion_Crediticia.asp';
+const RAGGIODEV_PORTFOLIO_URL = 'https://raggiodev.com';
 
 type TabId = 'scanner' | 'manual' | 'settings';
+
+function sanitizeCuitInputCharacters(rawValue: string): string {
+  return rawValue.replace(/[^\d-]/g, '').slice(0, 13);
+}
 
 function getRiskPalette(risk: RiskLevel): {
   label: string;
@@ -93,6 +101,25 @@ function getFindingIcon(severity: AuditFinding['severity']): string {
   }
 }
 
+function formatBreakdownDelta(item: ScoreBreakdownItem): {
+  text: string;
+  color: string;
+} {
+  const sign = item.delta > 0 ? '+' : '';
+  const text = `${sign}${item.delta}`;
+  switch (item.type) {
+    case 'base':
+      return { text, color: '#C4B5FD' };
+    case 'positive':
+      return { text, color: '#34D399' };
+    case 'negative':
+      return { text, color: '#F87171' };
+    case 'neutral':
+    default:
+      return { text, color: '#94A3B8' };
+  }
+}
+
 function buildFallbackUrlReport(rawTabUrl: string): StoreAuditReport | null {
   const parsed = parseSafeHttpUrl(rawTabUrl);
   if (!parsed) {
@@ -100,6 +127,12 @@ function buildFallbackUrlReport(rawTabUrl: string): StoreAuditReport | null {
   }
   const hostname = safeTruncate(parsed.hostname.toLowerCase(), 256);
   const isHttps = parsed.protocol === 'https:';
+  const scoreBreakdown: ScoreBreakdownItem[] = [
+    { label: 'Base vista previa URL', delta: 60, type: 'base' },
+    isHttps
+      ? { label: 'Conexión cifrada HTTPS', delta: 10, type: 'positive' }
+      : { label: 'Conexión sin cifrado HTTPS', delta: -20, type: 'negative' },
+  ];
   return {
     url: safeTruncate(parsed.href, 2048),
     hostname,
@@ -120,6 +153,7 @@ function buildFallbackUrlReport(rawTabUrl: string): StoreAuditReport | null {
       hasCartControls: false,
     },
     trustScore: isHttps ? 70 : 40,
+    scoreBreakdown,
     riskLevel: isHttps ? 'NEUTRAL' : 'WARNING',
     pillHeadline: isHttps
       ? 'Recargá la pestaña para auditar el DOM'
@@ -147,26 +181,6 @@ function buildFallbackUrlReport(rawTabUrl: string): StoreAuditReport | null {
   };
 }
 
-function buildPopupXAlertUrl(report: StoreAuditReport): string {
-  const header =
-    report.riskLevel === 'DANGER'
-      ? '🚨 Posible tienda online sospechosa'
-      : '⚠️ Precaución antes de transferir';
-  const bullets = report.findings
-    .filter((f) => f.severity !== 'SAFE')
-    .slice(0, 2)
-    .map((f) => `• ${f.title}`)
-    .join('\n');
-
-  const text = `${header}: ${report.hostname} (${report.trustScore}/100)\n${
-    bullets || '• Sin Data Fiscal ni CUIT verificable'
-  }\n\nVerificá siempre antes de transferir.\nDetectado con 🛡️ Escudo Criollo by @raggiodev`;
-
-  const url = new URL('https://x.com/intent/tweet');
-  url.searchParams.set('text', text);
-  return url.toString();
-}
-
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('scanner');
   const [report, setReport] = useState<StoreAuditReport | null>(null);
@@ -188,7 +202,11 @@ export const App: React.FC = () => {
     settings: null,
   });
 
-  const triggerCopyFeedback = async (key: string, textToCopy: string, announceLabel: string) => {
+  const triggerCopyFeedback = async (
+    key: string,
+    textToCopy: string,
+    announceLabel: string,
+  ) => {
     const ok = await copyTextSafely(textToCopy);
     if (ok) {
       setCopiedKey(key);
@@ -221,9 +239,12 @@ export const App: React.FC = () => {
 
       // 1. Request live DOM forensic report directly from content script
       try {
-        const rawResponse: unknown = await browser.tabs.sendMessage(current.id, {
-          type: 'GET_TAB_AUDIT',
-        });
+        const rawResponse: unknown = await browser.tabs.sendMessage(
+          current.id,
+          {
+            type: 'GET_TAB_AUDIT',
+          },
+        );
         if (
           rawResponse &&
           typeof rawResponse === 'object' &&
@@ -304,11 +325,28 @@ export const App: React.FC = () => {
     return sanitizeUrl(trimmed);
   }, [manualUrl]);
 
-  const handlePasteInto = async (setter: (value: string) => void) => {
+  const handlePasteCuit = async () => {
     try {
       const clip = await navigator.clipboard.readText();
       if (typeof clip === 'string') {
-        setter(clip.slice(0, 2048).trim());
+        const filtered = sanitizeCuitInputCharacters(clip.trim());
+        setManualCuit(filtered);
+        if (!filtered && clip.trim().length > 0) {
+          setLiveStatus(
+            'El texto del portapapeles no contenía números de CUIT válidos.',
+          );
+        }
+      }
+    } catch {
+      setLiveStatus('Pegá manualmente con Ctrl+V.');
+    }
+  };
+
+  const handlePasteUrl = async () => {
+    try {
+      const clip = await navigator.clipboard.readText();
+      if (typeof clip === 'string') {
+        setManualUrl(clip.slice(0, 2048).trim());
       }
     } catch {
       setLiveStatus('Pegá manualmente con Ctrl+V.');
@@ -340,7 +378,14 @@ export const App: React.FC = () => {
     [report?.riskLevel],
   );
 
-  // SVG Gauge math (radius = 30, circumference = 2 * pi * 30 ≈ 188.5)
+  const popupXAlertUrl = useMemo(
+    () =>
+      report && report.riskLevel === 'DANGER'
+        ? buildSafeXAlertTweet(report).intentUrl
+        : null,
+    [report],
+  );
+
   const gaugeCircumference = 188.5;
   const gaugeOffset = report
     ? gaugeCircumference - (report.trustScore / 100) * gaugeCircumference
@@ -382,14 +427,19 @@ export const App: React.FC = () => {
                     border: '1px solid rgba(251, 191, 36, 0.4)',
                   }}
                 >
-                  v0.1.0
+                  v0.1.1
                 </span>
               </div>
               <p className="text-2xs text-indigo-100/90 m-0 mt-0.5">
                 Defensa Anti-Estafas &amp; Privacidad ·{' '}
-                <span className="font-semibold text-raggio-goldLight">
+                <a
+                  href={RAGGIODEV_PORTFOLIO_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-raggio-goldLight hover:underline"
+                >
                   Raggiodev
-                </span>
+                </a>
               </p>
             </div>
           </div>
@@ -531,7 +581,7 @@ export const App: React.FC = () => {
                 {/* Trust Score Gauge + Domain Hero Card */}
                 <section
                   aria-label="Resumen de confianza"
-                  className="rounded-2xl border border-raggio-border bg-raggio-card p-3.5"
+                  className="rounded-2xl border border-raggio-border bg-raggio-card p-3.5 space-y-3"
                 >
                   <div className="flex items-center gap-3.5">
                     {/* Circular SVG Trust Gauge */}
@@ -613,8 +663,56 @@ export const App: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Collapsible Transparent Score Breakdown */}
+                  {report.scoreBreakdown.length > 0 && (
+                    <details className="group rounded-xl border border-raggio-border bg-raggio-canvas px-3 py-2">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-2xs font-semibold text-raggio-goldLight select-none min-h-[24px]">
+                        <span>📊 ¿De dónde sale este puntaje? (Desglose)</span>
+                        <ChevronRight
+                          className="h-3.5 w-3.5 shrink-0 text-raggio-gold transition-transform group-open:rotate-90"
+                          aria-hidden="true"
+                        />
+                      </summary>
+                      <ul
+                        role="list"
+                        className="mt-2 space-y-1.5 border-t border-raggio-border pt-2 m-0 p-0 list-none"
+                      >
+                        {report.scoreBreakdown.map((item, idx) => {
+                          const formatted = formatBreakdownDelta(item);
+                          return (
+                            <li
+                              key={`${item.label}-${idx}`}
+                              className="flex items-center justify-between gap-2 text-2xs"
+                            >
+                              <span className="text-slate-300 leading-snug">
+                                {item.label}
+                              </span>
+                              <span
+                                className="shrink-0 font-mono font-bold"
+                                style={{ color: formatted.color }}
+                              >
+                                {formatted.text}
+                              </span>
+                            </li>
+                          );
+                        })}
+                        <li className="flex items-center justify-between gap-2 border-t border-raggio-border/70 pt-1.5 text-2xs font-bold">
+                          <span className="text-slate-100">
+                            Puntaje Final (acotado 0–100)
+                          </span>
+                          <span
+                            className="font-mono"
+                            style={{ color: riskPalette.color }}
+                          >
+                            {report.trustScore}/100
+                          </span>
+                        </li>
+                      </ul>
+                    </details>
+                  )}
+
                   {/* Quick Actions Row */}
-                  <div className="mt-3 flex items-center gap-2 border-t border-raggio-border pt-2.5">
+                  <div className="flex items-center gap-2 border-t border-raggio-border pt-2.5">
                     <button
                       type="button"
                       onClick={() => {
@@ -651,26 +749,17 @@ export const App: React.FC = () => {
                       )}
                     </button>
 
-                    {(report.riskLevel === 'WARNING' ||
-                      report.riskLevel === 'DANGER') && (
+                    {report.riskLevel === 'DANGER' && popupXAlertUrl && (
                       <a
-                        href={buildPopupXAlertUrl(report)}
+                        href={popupXAlertUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex shrink-0 items-center gap-1 rounded-lg border px-2.5 py-1.5 text-2xs font-semibold no-underline min-h-[30px]"
-                        style={
-                          report.riskLevel === 'DANGER'
-                            ? {
-                                backgroundColor: 'rgba(69, 10, 10, 0.75)',
-                                borderColor: '#EF4444',
-                                color: '#F87171',
-                              }
-                            : {
-                                backgroundColor: 'rgba(69, 26, 3, 0.65)',
-                                borderColor: '#F59E0B',
-                                color: '#FBBF24',
-                              }
-                        }
+                        style={{
+                          backgroundColor: 'rgba(69, 10, 10, 0.75)',
+                          borderColor: '#EF4444',
+                          color: '#F87171',
+                        }}
                       >
                         <Megaphone className="h-3.5 w-3.5" aria-hidden="true" />
                         <span>Alertar en X</span>
@@ -679,128 +768,132 @@ export const App: React.FC = () => {
                   </div>
                 </section>
 
-                {/* CUIT & Data Fiscal ARCA Card */}
-                <section
-                  aria-label="Estado fiscal CUIT y ARCA"
-                  className="rounded-2xl border border-raggio-border bg-raggio-card p-3 space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-2xs font-bold uppercase tracking-wider text-slate-400 m-0">
-                      Identidad Fiscal (CUIT &amp; ARCA)
-                    </h2>
-                    <a
-                      href={BCRA_DEUDORES_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-2xs font-semibold text-raggio-gold hover:underline min-h-[24px]"
-                    >
-                      <span>Central de Deudores BCRA</span>
-                      <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                    </a>
-                  </div>
-
-                  {report.cuits.length > 0 ? (
-                    <div className="space-y-1.5">
-                      {report.cuits.slice(0, 3).map((cuit) => (
-                        <div
-                          key={cuit.digits}
-                          className="flex items-center justify-between gap-2 rounded-xl border border-raggio-border bg-raggio-canvas px-2.5 py-2"
-                        >
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span
-                                className="font-mono text-xs font-bold"
-                                style={{
-                                  color: cuit.isValid ? '#34D399' : '#F87171',
-                                }}
-                              >
-                                {cuit.formatted}
-                              </span>
-                              <span
-                                className="rounded border px-1.5 py-0.5 font-mono text-2xs font-bold"
-                                style={
-                                  cuit.isValid
-                                    ? {
-                                        color: '#34D399',
-                                        backgroundColor: 'rgba(6, 78, 59, 0.65)',
-                                        borderColor: '#10B981',
-                                      }
-                                    : {
-                                        color: '#F87171',
-                                        backgroundColor: 'rgba(69, 10, 10, 0.75)',
-                                        borderColor: '#EF4444',
-                                      }
-                                }
-                              >
-                                {cuit.isValid ? 'VÁLIDO' : 'TRUCHO'}
-                              </span>
-                            </div>
-                            <p className="text-2xs text-slate-400 m-0 mt-0.5 truncate">
-                              {cuit.entityLabel}
-                            </p>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              void triggerCopyFeedback(
-                                `cuit-${cuit.digits}`,
-                                cuit.formatted,
-                                `CUIT ${cuit.formatted} copiado.`,
-                              )
-                            }
-                            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-raggio-border bg-raggio-hover px-2 py-1 text-2xs font-semibold text-slate-200 hover:border-raggio-gold hover:text-raggio-gold min-h-[28px]"
-                          >
-                            {copiedKey === `cuit-${cuit.digits}` ? (
-                              <>
-                                <Check
-                                  className="h-3 w-3 text-semaphore-safeText"
-                                  aria-hidden="true"
-                                />
-                                <span>Copiado</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="h-3 w-3" aria-hidden="true" />
-                                <span>Copiar</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="rounded-xl border border-raggio-border bg-raggio-canvas px-3 py-2 font-mono text-2xs text-slate-400">
-                      No se detectó ningún CUIT en el sitio actual.
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between pt-1 text-xs">
-                    <span className="text-slate-400 text-2xs">
-                      Data Fiscal F.960:
-                    </span>
-                    {report.dataFiscal.status === 'VERIFIED_OFFICIAL_QR' &&
-                    report.dataFiscal.officialQrUrl ? (
+                {/* CUIT & Data Fiscal ARCA Card (shown on Argentine/local sites) */}
+                {report.ecommerce.platform !== 'ECOMMERCE_INTERNACIONAL' && (
+                  <section
+                    aria-label="Estado fiscal CUIT y ARCA"
+                    className="rounded-2xl border border-raggio-border bg-raggio-card p-3 space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xs font-bold uppercase tracking-wider text-slate-400 m-0">
+                        Identidad Fiscal (CUIT &amp; ARCA)
+                      </h2>
                       <a
-                        href={report.dataFiscal.officialQrUrl}
+                        href={BCRA_DEUDORES_URL}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 font-mono text-2xs font-bold text-semaphore-safeText hover:underline min-h-[24px]"
+                        className="inline-flex items-center gap-1 text-2xs font-semibold text-raggio-gold hover:underline min-h-[24px]"
                       >
-                        <span>🟢 QR Oficial Verificado</span>
+                        <span>Central de Deudores BCRA</span>
                         <ExternalLink className="h-3 w-3" aria-hidden="true" />
                       </a>
-                    ) : report.dataFiscal.status === 'FORGED_STATIC_SEAL' ? (
-                      <span className="font-mono text-2xs font-bold text-semaphore-dangerText">
-                        🔴 Sello Estático / Falsificado
-                      </span>
+                    </div>
+
+                    {report.cuits.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {report.cuits.slice(0, 3).map((cuit) => (
+                          <div
+                            key={cuit.digits}
+                            className="flex items-center justify-between gap-2 rounded-xl border border-raggio-border bg-raggio-canvas px-2.5 py-2"
+                          >
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className="font-mono text-xs font-bold"
+                                  style={{
+                                    color: cuit.isValid ? '#34D399' : '#F87171',
+                                  }}
+                                >
+                                  {cuit.formatted}
+                                </span>
+                                <span
+                                  className="rounded border px-1.5 py-0.5 font-mono text-2xs font-bold"
+                                  style={
+                                    cuit.isValid
+                                      ? {
+                                          color: '#34D399',
+                                          backgroundColor:
+                                            'rgba(6, 78, 59, 0.65)',
+                                          borderColor: '#10B981',
+                                        }
+                                      : {
+                                          color: '#F87171',
+                                          backgroundColor:
+                                            'rgba(69, 10, 10, 0.75)',
+                                          borderColor: '#EF4444',
+                                        }
+                                  }
+                                >
+                                  {cuit.isValid ? 'VÁLIDO' : 'TRUCHO'}
+                                </span>
+                              </div>
+                              <p className="text-2xs text-slate-400 m-0 mt-0.5 truncate">
+                                {cuit.entityLabel}
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void triggerCopyFeedback(
+                                  `cuit-${cuit.digits}`,
+                                  cuit.formatted,
+                                  `CUIT ${cuit.formatted} copiado.`,
+                                )
+                              }
+                              className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-raggio-border bg-raggio-hover px-2 py-1 text-2xs font-semibold text-slate-200 hover:border-raggio-gold hover:text-raggio-gold min-h-[28px]"
+                            >
+                              {copiedKey === `cuit-${cuit.digits}` ? (
+                                <>
+                                  <Check
+                                    className="h-3 w-3 text-semaphore-safeText"
+                                    aria-hidden="true"
+                                  />
+                                  <span>Copiado</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-3 w-3" aria-hidden="true" />
+                                  <span>Copiar</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     ) : (
-                      <span className="font-mono text-2xs text-semaphore-warnText">
-                        🟡 Ausente en la página
-                      </span>
+                      <div className="rounded-xl border border-raggio-border bg-raggio-canvas px-3 py-2 font-mono text-2xs text-slate-400">
+                        No se detectó ningún CUIT en la vista actual.
+                      </div>
                     )}
-                  </div>
-                </section>
+
+                    <div className="flex items-center justify-between pt-1 text-xs">
+                      <span className="text-slate-400 text-2xs">
+                        Data Fiscal F.960:
+                      </span>
+                      {report.dataFiscal.status === 'VERIFIED_OFFICIAL_QR' &&
+                      report.dataFiscal.officialQrUrl ? (
+                        <a
+                          href={report.dataFiscal.officialQrUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 font-mono text-2xs font-bold text-semaphore-safeText hover:underline min-h-[24px]"
+                        >
+                          <span>🟢 QR Oficial Verificado</span>
+                          <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                        </a>
+                      ) : report.dataFiscal.status === 'FORGED_STATIC_SEAL' ? (
+                        <span className="font-mono text-2xs font-bold text-semaphore-dangerText">
+                          🔴 Sello Estático / Falsificado
+                        </span>
+                      ) : (
+                        <span className="font-mono text-2xs text-slate-400">
+                          No detectado en vista actual
+                        </span>
+                      )}
+                    </div>
+                  </section>
+                )}
 
                 {/* Detailed Findings */}
                 <section aria-label="Hallazgos detallados">
@@ -877,7 +970,7 @@ export const App: React.FC = () => {
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => void handlePasteInto(setManualCuit)}
+                    onClick={() => void handlePasteCuit()}
                     className="inline-flex items-center gap-1 rounded-md border border-raggio-border bg-raggio-hover px-2 py-1 text-2xs font-medium text-slate-200 hover:border-raggio-gold hover:text-raggio-gold min-h-[26px]"
                   >
                     <ClipboardPaste className="h-3 w-3" aria-hidden="true" />
@@ -900,15 +993,18 @@ export const App: React.FC = () => {
                   htmlFor="cuit-manual-input"
                   className="block text-2xs text-slate-400 mb-1"
                 >
-                  Ingresá o pegá los 11 dígitos del vendedor antes de transferir:
+                  Ingresá los 11 dígitos numéricos del vendedor (solo números y guiones):
                 </label>
                 <input
                   id="cuit-manual-input"
                   type="text"
                   inputMode="numeric"
                   autoComplete="off"
+                  maxLength={13}
                   value={manualCuit}
-                  onChange={(e) => setManualCuit(e.target.value.slice(0, 32))}
+                  onChange={(e) =>
+                    setManualCuit(sanitizeCuitInputCharacters(e.target.value))
+                  }
                   placeholder="Ej: 30-70308853-4"
                   className="w-full rounded-xl border border-raggio-border bg-raggio-canvas px-3 py-2 font-mono text-sm text-white placeholder-slate-500 focus:border-raggio-gold"
                 />
@@ -946,10 +1042,13 @@ export const App: React.FC = () => {
                   </div>
 
                   <div className="text-2xs text-slate-200 font-medium">
-                    Tipo: <span className="text-raggio-goldLight">{manualCuitResult.entityLabel}</span>
+                    Tipo:{' '}
+                    <span className="text-raggio-goldLight">
+                      {manualCuitResult.entityLabel}
+                    </span>
                   </div>
                   <p className="text-2xs text-slate-300 m-0 leading-relaxed">
-                    {manualCuitResult.reason}
+                    {manualCuitResult.errorReason ?? manualCuitResult.reason}
                   </p>
 
                   <div className="flex items-center gap-2 pt-1">
@@ -1015,7 +1114,7 @@ export const App: React.FC = () => {
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => void handlePasteInto(setManualUrl)}
+                    onClick={() => void handlePasteUrl()}
                     className="inline-flex items-center gap-1 rounded-md border border-raggio-border bg-raggio-hover px-2 py-1 text-2xs font-medium text-slate-200 hover:border-raggio-gold hover:text-raggio-gold min-h-[26px]"
                   >
                     <ClipboardPaste className="h-3 w-3" aria-hidden="true" />
@@ -1038,7 +1137,7 @@ export const App: React.FC = () => {
                   htmlFor="url-manual-input"
                   className="block text-2xs text-slate-400 mb-1"
                 >
-                  Pegá un link sucio de MercadoLibre, Instagram, X, YouTube o TikTok:
+                  Pegá un link sucio de Amazon, MercadoLibre, Google Ads, Instagram o X:
                 </label>
                 <input
                   id="url-manual-input"
@@ -1046,7 +1145,7 @@ export const App: React.FC = () => {
                   autoComplete="off"
                   value={manualUrl}
                   onChange={(e) => setManualUrl(e.target.value.slice(0, 2048))}
-                  placeholder="https://articulo.mercadolibre.com.ar/...?matt_tool=..."
+                  placeholder="https://www.amazon.com/...?tag=...&gad_source=..."
                   className="w-full rounded-xl border border-raggio-border bg-raggio-canvas px-3 py-2 font-mono text-xs text-white placeholder-slate-500 focus:border-raggio-gold"
                 />
               </div>
@@ -1073,19 +1172,21 @@ export const App: React.FC = () => {
 
                       {manualSanitizeResult.removedParams.length > 0 && (
                         <div className="flex flex-wrap gap-1">
-                          {manualSanitizeResult.removedParams.map((param, idx) => (
-                            <span
-                              key={`${param}-${idx}`}
-                              className="rounded border px-1.5 py-0.5 font-mono text-2xs font-semibold"
-                              style={{
-                                backgroundColor: 'rgba(69, 10, 10, 0.65)',
-                                borderColor: 'rgba(239, 68, 68, 0.5)',
-                                color: '#FCA5A5',
-                              }}
-                            >
-                              − {param}
-                            </span>
-                          ))}
+                          {manualSanitizeResult.removedParams.map(
+                            (param, idx) => (
+                              <span
+                                key={`${param}-${idx}`}
+                                className="rounded border px-1.5 py-0.5 font-mono text-2xs font-semibold"
+                                style={{
+                                  backgroundColor: 'rgba(69, 10, 10, 0.65)',
+                                  borderColor: 'rgba(239, 68, 68, 0.5)',
+                                  color: '#FCA5A5',
+                                }}
+                              >
+                                − {param}
+                              </span>
+                            ),
+                          )}
                         </div>
                       )}
 
@@ -1236,7 +1337,7 @@ export const App: React.FC = () => {
                     Limpiar trackers automáticamente al copiar URLs
                   </div>
                   <p className="mt-0.5 text-2xs text-slate-400 m-0 leading-relaxed">
-                    Elimina parámetros espía (igsh, fbclid, matt_tool, utm) al copiar un enlace.
+                    Elimina parámetros espía (tag, gad_source, igsh, fbclid, matt_tool) al copiar.
                   </p>
                 </div>
                 <button
@@ -1349,11 +1450,16 @@ export const App: React.FC = () => {
       {/* Raggiodev Signature Footer */}
       <footer className="border-t border-raggio-border bg-raggio-card px-3.5 py-2.5 text-center">
         <div className="text-2xs text-slate-300">
-          <span className="font-mono font-semibold">Escudo Criollo v0.1.0</span>{' '}
+          <span className="font-mono font-semibold">Escudo Criollo v0.1.1</span>{' '}
           · Desarrollado por{' '}
-          <span className="raggio-gold-text font-extrabold tracking-wide">
-            Raggiodev
-          </span>
+          <a
+            href={RAGGIODEV_PORTFOLIO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-extrabold tracking-wide text-raggio-gold hover:underline"
+          >
+            <span className="raggio-gold-text">Raggiodev</span>
+          </a>
         </div>
         <div className="mt-0.5 font-mono text-2xs text-slate-400">
           100% Local &amp; Open Source
@@ -1362,4 +1468,3 @@ export const App: React.FC = () => {
     </div>
   );
 };
-

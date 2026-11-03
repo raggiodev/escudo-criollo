@@ -5,7 +5,7 @@ export default defineConfig({
   manifest: {
     name: 'Escudo Criollo (by Raggiodev)',
     short_name: 'Escudo Criollo',
-    version: '0.1.0',
+    version: '0.1.1',
     description:
       'Protección 100% local contra tiendas online truchas, sellos Data Fiscal ARCA/AFIP falsificados, CUITs inválidos y links con rastreadores.',
     author: {

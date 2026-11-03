@@ -1,10 +1,10 @@
-# 🛡️ Escudo Criollo `v0.1.0` *(by Raggiodev)*
+# 🛡️ Escudo Criollo `v0.1.1` *(by [Raggiodev](https://raggiodev.com))*
 
 Extensión de seguridad y privacidad **100% local (Zero-Server)** para Google Chrome (Manifest V3), diseñada para proteger a compradores de Argentina y Latinoamérica frente a **tiendas online truchas de anuncios**, **sellos F.960 Data Fiscal de ARCA/AFIP falsificados**, **CUITs inválidos** y **enlaces llenos de rastreadores**.
 
 ---
 
-## ✨ Motores Principales (`v0.1.0`)
+## ✨ Motores Principales (`v0.1.1`)
 
 1. **Validador Matemático de CUIT/CUIL & Auditor Forense Data Fiscal (`src/modules/v01-cuit-arca/validator.ts`)**
    - Verificación exacta de dígito verificador **Módulo 11** (`[5, 4, 3, 2, 7, 6, 5, 4, 3, 2]`), prefijos oficiales (`20, 23, 24, 25, 26, 27, 30, 33, 34`) y rechazo de secuencias repetitivas ficticias.

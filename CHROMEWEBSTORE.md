@@ -103,6 +103,7 @@ https://github.com/raggiodev/escudo-criollo
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
+| 0.1.1 | 2026-11-02 | Validación estricta anti-letras en CUIT, limpieza profunda de enlaces de Amazon y Google Ads (`gad_*`), soporte de hidratación SPA para sellos F.960 Data Fiscal, reconocimiento de comercios nacionales e internacionales verificados, auto-minimizado rápido de 2.5s y desglose transparente de puntaje. | Draft |
 | 0.1.0 | 2026-11-02 | Lanzamiento inicial: Validador Módulo 11 de CUIT/CUIL, inspector forense de sellos F.960 Data Fiscal ARCA/AFIP, detector heurístico de tiendas truchas, sanitizador de enlaces anti-rastreo, insignia flotante en página y panel táctico. | Draft |
 
 ## Review Notes

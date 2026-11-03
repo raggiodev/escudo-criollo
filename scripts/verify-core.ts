@@ -17,6 +17,10 @@ import {
   parseSafeHttpUrl,
   safeTruncate,
 } from '../src/types';
+import {
+  MAX_X_ALERT_TWEET_CHARS,
+  buildSafeXAlertTweet,
+} from '../src/utils/share';
 
 function createDoc(html: string, url: string): Document {
   const dom = new JSDOM(html, { url });
@@ -37,7 +41,7 @@ function runTest(name: string, fn: () => void): void {
 }
 
 async function main(): Promise<void> {
-  console.log('\n🛡️  ESCUDO CRIOLLO v0.1.0 (by Raggiodev) — Suite de Verificación Forense\n');
+  console.log('\n🛡️  ESCUDO CRIOLLO v0.1.1 (by Raggiodev) — Suite de Verificación Forense\n');
 
   // =========================================================================
   // 1. ENGINE 1: CUIT MODULO 11 & FORENSIC DATA FISCAL
@@ -54,6 +58,22 @@ async function main(): Promise<void> {
     const mlResult = validateCUIT('30-70308853-4');
     assert.equal(mlResult.isValid, true);
     assert.equal(mlResult.entityType, 'PERSONA_JURIDICA');
+  });
+
+  runTest('Rechaza estrictamente letras o símbolos infiltrados (ej. aaaaa20416s28a0151sssss)', () => {
+    const poisonedInput = 'aaaaa20416s28a0151sssss';
+    assert.equal(isValidCUIT(poisonedInput), false);
+
+    const detailed = validateCUIT(poisonedInput);
+    assert.equal(detailed.isValid, false);
+    assert.equal(
+      detailed.errorReason,
+      'Formato inválido: el CUIT solo puede contener 11 números (sin letras).',
+    );
+
+    assert.equal(isValidCUIT('30-70308853-4abc'), false);
+    assert.equal(isValidCUIT('CUIT 30-70308853-4'), false);
+    assert.equal(isValidCUIT('30/70308853/4'), false);
   });
 
   runTest('Rechaza CUITs con dígito verificador Módulo 11 erróneo', () => {
@@ -135,10 +155,64 @@ async function main(): Promise<void> {
     assert.equal(inspectDataFiscalDOM(brandImagesDoc).status, 'MISSING_DATA_FISCAL');
   });
 
+  runTest('Detecta sello F.960 oficial en payloads de hidratación SPA (VTEX / Next.js / Angular) antes de montar el footer', () => {
+    const vtexLazyHtml = `
+      <!doctype html>
+      <html>
+        <head><title>Tienda SPA Lazy Footer</title></head>
+        <body>
+          <main><p>$ 199.999</p><button>Agregar al carrito</button></main>
+          <script>
+            window.__STATE__ = {
+              "FooterSeal.1": {
+                "afipQrUrl": "http:\\/\\/qr.afip.gob.ar\\/?qr=eyJ2ZXIiOjEsImN1aXQiOjMwNzAzMDg4NTM0fQ=="
+              }
+            };
+          </script>
+        </body>
+      </html>
+    `;
+    const spaDoc = createDoc(vtexLazyHtml, 'https://electrohogar-ejemplo.com.ar/');
+    const dfAudit = inspectDataFiscalDOM(spaDoc);
+    assert.equal(dfAudit.status, 'VERIFIED_OFFICIAL_QR');
+    assert.ok(dfAudit.officialQrUrl?.startsWith('http://qr.afip.gob.ar/?qr='));
+  });
+
   // =========================================================================
   // 2. ENGINE 3: ANTI-TRACKING LINK SANITIZER
   // =========================================================================
   console.log('\n▶ Motor 3: Sanitizador de Enlaces Anti-Rastreo y Whitelist de Protocolos');
+
+  runTest('Limpia URLs complejas de Amazon (19+ rastreadores hv*/tag/ref, ruta /ref= y clave vacía ?&)', () => {
+    const dirtyAmazonHome =
+      'https://www.amazon.com/?&tag=txacdeesrow-20&ref=pd_sl_26in8pe1n8_e&adgrpid=159368102130&hvpone=&hvptwo=&hvadid=704582710993&hvpos=&hvnetw=g&hvrand=12319020644272931268&hvqmt=e&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9263083&hvtargid=kwd-360364908397&hydadcr=16277_13623325&mcid=a8a52c2c9c1d3cce9e4591c7e5b0f1f9&hvocijid=12319020644272931268--&hvexpln=nav&language=es_US';
+    const resHome = sanitizeUrl(dirtyAmazonHome);
+    assert.equal(resHome.isValidHttpUrl, true);
+    assert.equal(resHome.isModified, true);
+    assert.equal(resHome.cleanUrl, 'https://www.amazon.com/?language=es_US');
+    assert.ok(
+      resHome.removedCount >= 19,
+      `Se esperaban >= 19 rastreadores eliminados, se eliminaron ${resHome.removedCount}`,
+    );
+
+    const dirtyAmazonProduct =
+      'https://www.amazon.com/dp/B09V3KXJPB/ref=sr_1_3?tag=txacdeesrow-20&qid=1730551122&sr=8-3&k=auriculares';
+    const resProd = sanitizeUrl(dirtyAmazonProduct);
+    assert.equal(resProd.cleanUrl, 'https://www.amazon.com/dp/B09V3KXJPB?k=auriculares');
+    assert.ok(resProd.removedParams.includes('ref (ruta)'));
+
+    const malformedOnly = 'https://www.amazon.com/?&language=es_US';
+    assert.equal(sanitizeUrl(malformedOnly).cleanUrl, 'https://www.amazon.com/?language=es_US');
+  });
+
+  runTest('Limpia parámetros gad_source y gad_campaignid de Google Ads en comercios argentinos (Cetrogar)', () => {
+    const dirtyCetrogar =
+      'https://www.cetrogar.com.ar/heladera-no-frost.html?gad_source=1&gad_campaignid=11723552608';
+    const res = sanitizeUrl(dirtyCetrogar);
+    assert.equal(res.isModified, true);
+    assert.equal(res.removedCount, 2);
+    assert.equal(res.cleanUrl, 'https://www.cetrogar.com.ar/heladera-no-frost.html');
+  });
 
   runTest('Limpia parámetros y hash #polycard_client de MercadoLibre', () => {
     const dirtyMl =
@@ -173,10 +247,7 @@ async function main(): Promise<void> {
 
     // X / Twitter: MUST strip ?s=20 and tracking ?t=token
     const dirtyX =
-      'https://x.com/raggiodev/status/185000111222?s=20&t= RandomTrackerToken99'.replace(
-        ' ',
-        '',
-      );
+      'https://x.com/raggiodev/status/185000111222?s=20&t=RandomTrackerToken99';
     const cleanX = sanitizeUrl(dirtyX);
     assert.equal(cleanX.cleanUrl, 'https://x.com/raggiodev/status/185000111222');
   });
@@ -199,9 +270,41 @@ async function main(): Promise<void> {
   // =========================================================================
   // 3. ENGINE 2: E-COMMERCE DETECTOR, SCAM SCORER & ZERO-TRUST DEFENSES
   // =========================================================================
-  console.log('\n▶ Motor 2: Heurísticas Anti-Estafas de Tiendas y Defensas Zero-Trust');
+  console.log('\n▶ Motor 2: Heurísticas Anti-Estafas de Tiendas, Registros Oficiales y Desglose');
 
-  runTest('Califica SAFE a tienda argentina verificada con CUIT válido, QR F.960 y .com.ar', () => {
+  runTest('Reconoce retailers oficiales argentinos (CompraGamer, Cetrogar) y globales (Tiendamia, Amazon) como SAFE >= 96/100', () => {
+    const minimalSpaShell = '<!doctype html><html><head><title>Store</title></head><body><div id="app"></div></body></html>';
+
+    for (const storeUrl of [
+      'https://www.compragamer.com/',
+      'https://www.cetrogar.com.ar/',
+      'https://tiendamia.com.ar/',
+      'https://www.amazon.com/',
+    ]) {
+      const doc = createDoc(minimalSpaShell, storeUrl);
+      const report = auditStoreSecurity(doc, storeUrl);
+      assert.equal(
+        report.ecommerce.isEcommerce,
+        true,
+        `${storeUrl} debía detectarse como isEcommerce: true`,
+      );
+      assert.equal(
+        report.riskLevel,
+        'SAFE',
+        `${storeUrl} debía calificarse como SAFE, recibió ${report.riskLevel}`,
+      );
+      assert.ok(
+        report.trustScore >= 96,
+        `${storeUrl} debía tener trustScore >= 96, recibió ${report.trustScore}`,
+      );
+      assert.ok(
+        report.scoreBreakdown.length >= 2,
+        `${storeUrl} debía incluir scoreBreakdown transparente`,
+      );
+    }
+  });
+
+  runTest('Califica SAFE a tienda argentina verificada con CUIT válido, QR F.960, .com.ar y scoreBreakdown exacto', () => {
     const legitHtml = `
       <!doctype html>
       <html>
@@ -235,6 +338,8 @@ async function main(): Promise<void> {
     assert.equal(report.riskLevel, 'SAFE');
     assert.ok(report.trustScore >= 85, `Score esperado >= 85, recibido ${report.trustScore}`);
     assert.equal(report.pillHeadline, 'Tienda Verificada · CUIT OK');
+    assert.ok(report.scoreBreakdown.some((item) => item.type === 'base' && item.delta === 60));
+    assert.ok(report.scoreBreakdown.some((item) => item.type === 'positive' && item.delta === 20));
   });
 
   runTest('Califica WARNING a tienda informal sin CUIT ni Data Fiscal (sin señales truchas)', () => {
@@ -261,7 +366,7 @@ async function main(): Promise<void> {
     assert.equal(report.pillHeadline, 'Precaución · Sin Data Fiscal');
   });
 
-  runTest('Califica DANGER (Alerta máxima) a tienda trucha con subdominio gratis + 50% transferencia + sello y CUIT falsos', () => {
+  runTest('Califica DANGER a tienda trucha y genera alerta segura en X (<= 230 chars, sin @raggiodev)', () => {
     const scamHtml = `
       <!doctype html>
       <html>
@@ -297,6 +402,15 @@ async function main(): Promise<void> {
     assert.ok(findingIds.has('invalid-cuit-modulo11'));
     assert.ok(findingIds.has('broken-footer-social-links'));
     assert.ok(findingIds.has('free-subdomain-aggressive-transfer'));
+
+    const { tweetText, intentUrl } = buildSafeXAlertTweet(report);
+    assert.ok(
+      tweetText.length <= MAX_X_ALERT_TWEET_CHARS,
+      `Tweet excede 230 caracteres (${tweetText.length})`,
+    );
+    assert.ok(tweetText.endsWith('Detectado con 🛡️ Escudo Criollo'));
+    assert.equal(tweetText.toLowerCase().includes('@raggiodev'), false);
+    assert.ok(intentUrl.startsWith('https://x.com/intent/tweet?text='));
   });
 
   runTest('Inmunidad ante DOM Clobbering, caracteres BiDi y truncamiento estricto <= 256 chars', () => {
@@ -337,7 +451,7 @@ async function main(): Promise<void> {
 
   const storageMod = await import('../src/utils/storage');
 
-  runTest('Valida remitente Zero-Trust (sender.id === runtime.id) y rechaza payloads adulterados', () => {
+  runTest('Valida remitente Zero-Trust, scoreBreakdown en StoreAuditReport y rechaza payloads adulterados', () => {
     assert.equal(
       storageMod.isTrustedExtensionSender({ id: 'escudo-criollo-unit-test-id' }),
       true,
@@ -357,6 +471,12 @@ async function main(): Promise<void> {
       type: 'GET_TAB_AUDIT',
     });
 
+    const cgDoc = createDoc('<html><body></body></html>', 'https://www.compragamer.com/');
+    const cgReport = auditStoreSecurity(cgDoc, 'https://www.compragamer.com/');
+    const validatedReport = storageMod.validateStoreAuditReport(cgReport);
+    assert.notEqual(validatedReport, null);
+    assert.ok((validatedReport?.scoreBreakdown.length ?? 0) >= 2);
+
     const sanitizedSettings = storageMod.validateSettings({
       showFloatingBadge: 'not-a-boolean',
       badgePosition: 'top-center-invalid',
@@ -367,7 +487,7 @@ async function main(): Promise<void> {
     assert.deepEqual(sanitizedSettings.dismissedDomains, ['tiendatrucha.com']);
   });
 
-  console.log(`\n✨ ÉXITO TOTAL: ${passedTests}/${passedTests} aserciones forenses verificadas con 0 errores.\n`);
+  console.log(`\n✨ ÉXITO TOTAL: ${passedTests}/${passedTests} aserciones forenses v0.1.1 verificadas con 0 errores.\n`);
 }
 
 try {

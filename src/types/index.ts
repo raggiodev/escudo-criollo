@@ -13,6 +13,14 @@ export interface AuditFinding {
   evidence?: string;
 }
 
+export type ScoreBreakdownType = 'base' | 'positive' | 'negative' | 'neutral';
+
+export interface ScoreBreakdownItem {
+  label: string;
+  delta: number;
+  type: ScoreBreakdownType;
+}
+
 export type CuitEntityType =
   | 'PERSONA_HUMANA_MASC'
   | 'PERSONA_HUMANA_FEM'
@@ -29,6 +37,7 @@ export interface CuitValidationResult {
   entityType: CuitEntityType;
   entityLabel: string;
   reason: string;
+  errorReason?: string;
 }
 
 export type DataFiscalStatus =
@@ -53,6 +62,8 @@ export type EcommercePlatform =
   | 'PRESTASHOP'
   | 'MAGENTO'
   | 'TIENDA_ARGENTINA'
+  | 'COMERCIO_OFICIAL_AR'
+  | 'ECOMMERCE_INTERNACIONAL'
   | 'SITIO_OFICIAL'
   | 'NO_ECOMMERCE';
 
@@ -74,6 +85,7 @@ export interface StoreAuditReport {
   timestamp: number;
   ecommerce: EcommerceContext;
   trustScore: number;
+  scoreBreakdown: ScoreBreakdownItem[];
   riskLevel: RiskLevel;
   pillHeadline: string;
   cuits: CuitValidationResult[];
@@ -148,12 +160,10 @@ export function safeTruncate(input: unknown, maxLength: number = MAX_FIELD_LENGT
     return '';
   }
   const cap = Math.max(1, Math.min(maxLength, MAX_URL_LENGTH));
-  // Slice early before character filtering to avoid large intermediate allocations
   const rawSlice = input.slice(0, cap * 2);
   let cleaned = '';
   for (let i = 0; i < rawSlice.length; i++) {
     const code = rawSlice.charCodeAt(i);
-    // Strip ASCII control chars (0x00-0x1F, 0x7F) and BiDi spoofing overrides (U+202A..U+202E, U+2066..U+2069)
     const isControl = code <= 0x1f || code === 0x7f;
     const isBidiOverride =
       (code >= 0x202a && code <= 0x202e) || (code >= 0x2066 && code <= 0x2069);
@@ -191,4 +201,3 @@ export function parseSafeHttpUrl(rawUrl: unknown, baseUrl?: string): URL | null 
     return null;
   }
 }
-
