@@ -165,7 +165,12 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
       return;
     }
 
-    if (!shouldShowShield || isExpanded) {
+    if (!shouldShowShield) {
+      setIsExpanded(false);
+      return;
+    }
+
+    if (isExpanded) {
       return;
     }
 
@@ -351,7 +356,7 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
                         border: '1px solid rgba(251, 191, 36, 0.35)',
                       }}
                     >
-                      v0.1.3
+                      v0.1.4
                     </span>
                   </div>
                   <p className="text-2xs text-indigo-100/90 m-0 leading-tight">
@@ -391,7 +396,22 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
                   Plataforma / Dominio
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="inline-flex items-center rounded-md bg-raggio-hover px-1.5 py-0.5 text-2xs font-semibold text-raggio-gold border border-raggio-border">
+                  <span
+                    className="inline-flex items-center rounded-md border px-1.5 py-0.5 text-2xs font-semibold"
+                    style={
+                      report.ecommerce.platform === 'RAGGIODEV_HQ'
+                        ? {
+                            color: '#34D399',
+                            backgroundColor: 'rgba(6, 78, 59, 0.75)',
+                            borderColor: '#10B981',
+                          }
+                        : {
+                            color: '#FBBF24',
+                            backgroundColor: '#1F193D',
+                            borderColor: '#2B2354',
+                          }
+                    }
+                  >
                     {report.ecommerce.platformLabel}
                   </span>
                   <span className="truncate font-mono text-2xs text-slate-300">
@@ -483,7 +503,8 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
             )}
 
             {/* CUIT & ARCA/AFIP Status Box */}
-            {report.ecommerce.platform !== 'ECOMMERCE_INTERNACIONAL' && (
+            {report.ecommerce.platform !== 'ECOMMERCE_INTERNACIONAL' &&
+              report.ecommerce.platform !== 'RAGGIODEV_HQ' && (
               <div
                 className="rounded-xl border p-2.5 space-y-2"
                 style={{

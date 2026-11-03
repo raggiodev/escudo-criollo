@@ -445,6 +445,64 @@ function scanHydrationPayloadsForOfficialQr(doc: Document): string | null {
   return null;
 }
 
+export const NON_ECOMMERCE_PLATFORMS = [
+  'github.com',
+  'gitlab.com',
+  'bitbucket.org',
+  'stackoverflow.com',
+  'google.com',
+  'google.com.ar',
+  'youtube.com',
+  'youtu.be',
+  'x.com',
+  'twitter.com',
+  'linkedin.com',
+  'reddit.com',
+  'wikipedia.org',
+  'medium.com',
+  'substack.com',
+  'orcid.org',
+  'linktr.ee',
+  'discord.com',
+  'whatsapp.com',
+  'telegram.org',
+  't.me',
+  'gmail.com',
+  'outlook.com',
+  'live.com',
+  'chatgpt.com',
+  'openai.com',
+  'gemini.google.com',
+  'claude.ai',
+] as const;
+
+export function isNonEcommercePlatformHost(hostname: string): boolean {
+  if (!hostname) {
+    return false;
+  }
+  const clean = hostname.toLowerCase();
+  return NON_ECOMMERCE_PLATFORMS.some(
+    (domain) => clean === domain || clean.endsWith(`.${domain}`),
+  );
+}
+
+const CODE_OR_DOC_CONTAINER_SELECTOR =
+  'code, pre, article.markdown-body, [class*="markdown" i], [data-hpc], .react-directory-row, .Box-row';
+
+const FOOTER_CONTAINER_SELECTOR =
+  'footer, [role="contentinfo"], [class*="footer" i], [id*="footer" i], [class*="pie-pagina" i]';
+
+const STRICT_SEAL_TEXT_REGEX =
+  /^(?:data\s*fiscal|formulario\s*960|f\.?\s*960(?:\s*afip|\s*arca)?|sello\s*afip|qr\s*afip|qr\s*arca)$/i;
+
+function isInsideCodeOrDocContainer(el: Element): boolean {
+  try {
+    return el.closest(CODE_OR_DOC_CONTAINER_SELECTOR) !== null;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Forensic DOM & SPA hydration inspector for Argentine F.960 Data Fiscal QR seals.
  * Detects genuine clickable ARCA/AFIP validation links vs. forged static/broken scam seals.
@@ -458,6 +516,17 @@ export function inspectDataFiscalDOM(
   const pageHost = baseUrlObj ? baseUrlObj.hostname.toLowerCase() : '';
 
   const isGovPortal = pageHost === 'gob.ar' || pageHost.endsWith('.gob.ar');
+  const isNonEcommercePlatform = isNonEcommercePlatformHost(pageHost);
+
+  if (isNonEcommercePlatform) {
+    return {
+      status: 'MISSING_DATA_FISCAL',
+      officialQrUrl: null,
+      forgedEvidence: null,
+      summary:
+        'Plataforma informativa, red social o repositorio de código (no aplica sello comercial F.960).',
+    };
+  }
 
   const verifiedAnchors = new Set<HTMLAnchorElement>();
   let firstOfficialQrUrl: string | null = null;
@@ -468,7 +537,7 @@ export function inspectDataFiscalDOM(
 
   for (let i = 0; i < maxAnchors; i++) {
     const node = anchorNodes[i];
-    if (!isAnchorElement(node, doc)) {
+    if (!isAnchorElement(node, doc) || isInsideCodeOrDocContainer(node)) {
       continue;
     }
     const rawHref = node.getAttribute('href');
@@ -509,7 +578,7 @@ export function inspectDataFiscalDOM(
 
   for (let i = 0; i < maxImages; i++) {
     const node = imgNodes[i];
-    if (!isImageElement(node, doc)) {
+    if (!isImageElement(node, doc) || isInsideCodeOrDocContainer(node)) {
       continue;
     }
 
@@ -563,20 +632,32 @@ export function inspectDataFiscalDOM(
     };
   }
 
-  // Step 3: Check <a> links explicitly claiming to be "Data Fiscal" / "Formulario 960" that point nowhere
+  // Step 3: Check <a> links inside a footer explicitly claiming to be the tax seal itself that point nowhere
   for (let i = 0; i < maxAnchors; i++) {
     const node = anchorNodes[i];
-    if (!isAnchorElement(node, doc) || !isHtmlElement(node, doc)) {
+    if (
+      !isAnchorElement(node, doc) ||
+      !isHtmlElement(node, doc) ||
+      isInsideCodeOrDocContainer(node)
+    ) {
       continue;
     }
-    const anchorText = safeTruncate(node.textContent ?? '', 160);
-    const anchorTitle = getSafeAttr(node, 'title', 160);
-    const ariaLabel = getSafeAttr(node, 'aria-label', 160);
 
+    let isInFooter = false;
+    try {
+      isInFooter = node.closest(FOOTER_CONTAINER_SELECTOR) !== null;
+    } catch {
+      isInFooter = false;
+    }
+    if (!isInFooter) {
+      continue;
+    }
+
+    const anchorText = safeTruncate(node.textContent ?? '', 160).trim();
     if (
-      /data[\s._-]{0,2}fiscal|formulario\s*960|\bf\.?960\b/i.test(
-        `${anchorText} ${anchorTitle} ${ariaLabel}`,
-      )
+      anchorText.length > 0 &&
+      anchorText.length <= 45 &&
+      STRICT_SEAL_TEXT_REGEX.test(anchorText)
     ) {
       const rawHref = (node.getAttribute('href') ?? '').trim();
       const parsed = parseSafeHttpUrl(rawHref, baseUrlStr);
@@ -588,7 +669,7 @@ export function inspectDataFiscalDOM(
           status: 'FORGED_STATIC_SEAL',
           officialQrUrl: null,
           forgedEvidence: safeTruncate(
-            `Enlace "Data Fiscal" falso -> ${targetDesc}`,
+            `Enlace "${anchorText}" falso -> ${targetDesc}`,
             256,
           ),
           summary:

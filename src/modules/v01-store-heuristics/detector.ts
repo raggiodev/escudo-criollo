@@ -18,9 +18,13 @@ import {
   isHtmlElement,
 } from '../../utils/dom-safety';
 import {
+  NON_ECOMMERCE_PLATFORMS,
   extractCUITsFromText,
   inspectDataFiscalDOM,
+  isNonEcommercePlatformHost,
 } from '../v01-cuit-arca/validator';
+
+export { NON_ECOMMERCE_PLATFORMS, isNonEcommercePlatformHost };
 
 // Official CACE Shopping Events & Chamber Portals (isEcommerce: true, 100/100 SAFE)
 const VERIFIED_CACE_EVENT_DOMAINS = [
@@ -29,47 +33,185 @@ const VERIFIED_CACE_EVENT_DOMAINS = [
   'cace.org.ar',
 ] as const;
 
-// Verified National Argentine Retailers, Marketplaces, Official Brands & Tech Stores (isEcommerce: true, 100/100 SAFE)
+// Verified National Argentine Retailers, Marketplaces, CyberMonday CACE Brands & Tech Stores (isEcommerce: true, 100/100 SAFE)
 export const VERIFIED_ARGENTINE_RETAILERS = [
+  // Marketplaces & CACE Events
   'mercadolibre.com.ar',
   'mercadolibre.com',
   'mercadopago.com.ar',
   'mercadoshops.com.ar',
+  'shopee.com.ar',
   'cybermonday.com.ar',
   'hotsale.com.ar',
   'cace.org.ar',
-  'compragamer.com',
+
+  // Salud y Belleza
+  'farmacity.com',
+  'farmacity.com.ar',
+  'simplicity.com.ar',
+  'getthelook.com.ar',
+  'juleriaque.com.ar',
+  'farmaonline.com',
+  'parfumerie.com.ar',
+  'openfarma.com.ar',
+  'pigmento.com.ar',
+  'rouje.com.ar',
+  'masfarmacias.com',
+  'farmaciaslider.com.ar',
+  'farmacialeloir.com.ar',
+
+  // Muebles, Hogar y Colchonería
+  'easy.com.ar',
+  'cencosud.com.ar',
+  'naldo.com.ar',
+  'sommiercenter.com',
+  'arredo.com.ar',
+  'sodimac.com.ar',
+  'perozzi.com.ar',
+  'perozzihogar.com.ar',
+  'belmo.com.ar',
+  'bedtime.com.ar',
+  'simmons.com.ar',
+  'tiendaslandmark.com.ar',
+  'landmark.com.ar',
+  'suenodorado.com.ar',
+  'calmessimple.com.ar',
+  'laespumeria.com.ar',
+  'piero.com.ar',
+  'rosen.com.ar',
+  'cannonhome.com.ar',
+  'morph.com.ar',
+  'bazarchef.com.ar',
+
+  // Viajes, Turismo y Asistencia al Viajero
+  'goassistance.com',
+  'goassistance.com.ar',
+  'assistcard.com',
+  'almundo.com.ar',
+  'aeropuertosargentina.com',
+  'aa2000.com.ar',
+  'deturista.com',
+  'universal-assistance.com',
+  'coris.com.ar',
+  'axa-assistance.com.ar',
+  'iberia.com',
+  'coloniaexpress.com',
+  'buquebus.com',
+  'aerolineas.com.ar',
+  'flybondi.com',
+  'jetsmart.com',
+  'latamairlines.com',
+  'despegar.com.ar',
+  'turismocity.com.ar',
+  'avantrip.com',
+  'atrapalo.com.ar',
+  'plataforma10.com.ar',
+  'centraldepasajes.com.ar',
+
+  // Supermercados, Bodegas y Gastronomía
+  'jumbo.com.ar',
+  'carrefour.com.ar',
+  'disco.com.ar',
+  'vea.com.ar',
+  'coca-cola.com.ar',
+  'coto.com.ar',
+  'cotodigital.com.ar',
+  'cotodigital3.com.ar',
+  'diaonline.supermercadosdia.com.ar',
+  'supermercadosdia.com.ar',
+  'masonline.com.ar',
+  'laanonimaonline.com',
+  'hiperlibertad.com.ar',
+  'craftsociety.com.ar',
+  'bonvivir.com',
+  'siempreencasa.com.ar',
+  'taura.com.ar',
+  'arcorencasa.com',
+  'havanna.com.ar',
+  'cafemartinez.com',
+  'gridohelado.com',
+  'nespresso.com',
+
+  // Indumentaria, Calzado y Bebés
+  'moov.com.ar',
+  'ovb.com.ar',
+  'coppel.com.ar',
+  'dexter.com.ar',
+  'stockcenter.com.ar',
+  'mimo.com.ar',
+  'cheeky.com.ar',
+  'grisino.com',
+  'wanama.com',
+  'kosiuko.com',
+  'jazminchebar.com.ar',
+  'rapsodia.com.ar',
+  'prune.com.ar',
+  'xl.com.ar',
+  'todomoda.com',
+  'isadoraonline.com',
+  'montagne.com.ar',
+  'ansilta.com',
+  'equus.com.ar',
+  'macowens.com.ar',
+  'devre.la',
+  'cardon.com.ar',
+  'kevingston.com',
+  'lacoste.com',
+  'topper.com.ar',
+  'fila.com.ar',
+  'umbro.com.ar',
+  'reebok.com.ar',
+  'underarmour.com.ar',
+  'newbalance.com.ar',
+  'vans.com.ar',
+  'converse.com.ar',
+  'grimoldi.com',
+  'paruolo.com.ar',
+  'rickysarkany.com',
+  'ver.com.ar',
+  '47street.com.ar',
+  'portsaid.com.ar',
+  'desiderata.com.ar',
+  'markova.com',
+  'solodeportes.com.ar',
+  'grid.com.ar',
+  'sportline.com.ar',
+  'dash.com.ar',
+  'adidas.com.ar',
+  'nike.com.ar',
+  'puma.com',
+  'levi.com.ar',
+  'zara.com',
+  'dafiti.com.ar',
+
+  // Electro y Tecnología
+  'gadnic.com.ar',
+  'bidcom.com.ar',
+  'novogar.com.ar',
+  'espacioelectronica.com',
+  'casadelaudio.com',
+  'pardo.com.ar',
+  'hendel.com',
   'cetrogar.com.ar',
   'fravega.com',
   'fravega.com.ar',
   'musimundo.com',
   'musimundo.com.ar',
   'megatone.net',
-  'naldo.com.ar',
   'oncity.com',
-  'carrefour.com.ar',
-  'coto.com.ar',
-  'cotodigital3.com.ar',
-  'cotodigital.com.ar',
-  'diaonline.supermercadosdia.com.ar',
-  'supermercadosdia.com.ar',
-  'jumbo.com.ar',
-  'vea.com.ar',
-  'disco.com.ar',
-  'easy.com.ar',
-  'sodimac.com.ar',
-  'farmacity.com',
-  'farmacity.com.ar',
-  'dexter.com.ar',
-  'stockcenter.com.ar',
-  'moov.com.ar',
-  'solodeportes.com.ar',
-  'grid.com.ar',
-  'yenny-elateneo.com',
-  'cuspide.com',
-  'adidas.com.ar',
-  'nike.com.ar',
-  'puma.com',
+  'compragamer.com',
+  'maximus.com.ar',
+  'venex.com.ar',
+  'fullh4rd.com.ar',
+  'mexx.com.ar',
+  'gezatek.com.ar',
+  'logg.com.ar',
+  'start.com.ar',
+  'diggit.com.ar',
+  'stylestore.com.ar',
+  'macstation.com.ar',
+  'ipoint.com.ar',
+  'oneclickstore.com',
   'samsung.com',
   'motorola.com.ar',
   'lg.com',
@@ -78,43 +220,27 @@ export const VERIFIED_ARGENTINE_RETAILERS = [
   'noblex.com.ar',
   'atma.com.ar',
   'bgh.com.ar',
+  'drean.com.ar',
+  'whirlpool.com.ar',
+  'electrolux.com.ar',
+  'peabody.com.ar',
+  'liliana.com.ar',
+  'osterargentina.com',
+  'philips.com.ar',
   'personal.com.ar',
   'tiendapersonal.com.ar',
+  'claro.com.ar',
   'tienda.claro.com.ar',
+  'movistar.com.ar',
   'tienda.movistar.com.ar',
-  'coca-cola.com.ar',
-  'siempreencasa.com.ar',
-  'taura.com.ar',
-  'arcorencasa.com',
-  'havanna.com.ar',
-  'cafemartinez.com',
-  'gridohelado.com',
-  'nespresso.com',
-  'levi.com.ar',
-  'zara.com',
-  'dafiti.com.ar',
-  'stylestore.com.ar',
-  'parfumerie.com.ar',
-  'juleriaque.com.ar',
-  'pigmento.com.ar',
-  'openfarma.com.ar',
-  'farmaonline.com',
-  'sportline.com.ar',
-  'dash.com.ar',
-  'diggit.com.ar',
-  'start.com.ar',
-  'maximus.com.ar',
-  'venex.com.ar',
-  'fullh4rd.com.ar',
-  'mexx.com.ar',
-  'gezatek.com.ar',
-  'logg.com.ar',
+  'yenny-elateneo.com',
+  'cuspide.com',
 ] as const;
 
 const VERIFIED_ARGENTINE_ECOMMERCE_DOMAINS = VERIFIED_ARGENTINE_RETAILERS;
 
-// Verified International E-Commerce & Cross-Border Courier Platforms (isEcommerce: true, 96/100 SAFE)
-const VERIFIED_INTERNATIONAL_ECOMMERCE_DOMAINS = [
+// Verified International E-Commerce & Cross-Border Courier Platforms (isEcommerce: true, 100/100 SAFE)
+export const VERIFIED_INTERNATIONAL_PLATFORMS = [
   'amazon.com',
   'amazon.es',
   'amazon.com.br',
@@ -129,6 +255,11 @@ const VERIFIED_INTERNATIONAL_ECOMMERCE_DOMAINS = [
   'shein.com',
   'shein.com.ar',
   'temu.com',
+  'shopee.com',
+  'shopee.com.br',
+  'shopee.cl',
+  'shopee.com.mx',
+  'shopee.com.co',
   'steampowered.com',
   'playstation.com',
   'xbox.com',
@@ -137,13 +268,12 @@ const VERIFIED_INTERNATIONAL_ECOMMERCE_DOMAINS = [
   'booking.com',
   'airbnb.com',
   'airbnb.com.ar',
-  'despegar.com.ar',
-  'almundo.com.ar',
-  'turismocity.com.ar',
 ] as const;
 
-// Verified Non-Store Government & Financial Institutions
-const VERIFIED_INSTITUTIONAL_DOMAINS = [
+const VERIFIED_INTERNATIONAL_ECOMMERCE_DOMAINS = VERIFIED_INTERNATIONAL_PLATFORMS;
+
+// Verified Non-Store Government, Financial & University Institutions (100/100 SAFE)
+export const VERIFIED_OFFICIAL_INSTITUTIONS = [
   'afip.gob.ar',
   'arca.gob.ar',
   'bcra.gob.ar',
@@ -162,7 +292,21 @@ const VERIFIED_INSTITUTIONAL_DOMAINS = [
   'brubank.com',
   'uala.com.ar',
   'naranjax.com',
+  'palermo.edu',
+  'uba.ar',
+  'utn.edu.ar',
+  'uade.edu.ar',
+  'itba.edu.ar',
+  'ucema.edu.ar',
+  'uca.edu.ar',
+  'austral.edu.ar',
+  'siglo21.edu.ar',
+  'kennedy.edu.ar',
+  'orted.edu.ar',
+  'ort.edu.ar',
 ] as const;
+
+const VERIFIED_INSTITUTIONAL_DOMAINS = VERIFIED_OFFICIAL_INSTITUTIONS;
 
 const FREE_SUBDOMAIN_SUFFIXES = [
   '.mitiendanube.com',
@@ -233,21 +377,71 @@ function matchesDomainOrSubdomain(hostname: string, target: string): boolean {
   return hostname === target || hostname.endsWith(`.${target}`);
 }
 
+/**
+ * Detects whether a URL belongs to any official portfolio, repository, academic profile,
+ * or social channel of Escudo Criollo's creator: Fernando Andres Raggio (Raggiodev).
+ */
+export function isRaggiodevCreatorUrl(rawUrl: string): boolean {
+  const parsed = parseSafeHttpUrl(rawUrl);
+  if (!parsed) {
+    return false;
+  }
+  const fullHost = parsed.hostname.toLowerCase();
+  const baseHost = fullHost.replace(/^www\./, '');
+  const pathLower = parsed.pathname.toLowerCase();
+
+  if (pathLower.includes('demo-tienda-trucha')) {
+    return false;
+  }
+
+  if (
+    fullHost === 'raggiodev.com' ||
+    fullHost.endsWith('.raggiodev.com') ||
+    fullHost === 'raggiodev.github.io' ||
+    fullHost === 'raggiodev.substack.com'
+  ) {
+    return true;
+  }
+
+  if (
+    (baseHost === 'linktr.ee' ||
+      baseHost === 'github.com' ||
+      baseHost === 'x.com' ||
+      baseHost === 'twitter.com') &&
+    /^\/raggiodev(?:\/|$)/i.test(pathLower)
+  ) {
+    return true;
+  }
+
+  if (
+    baseHost === 'orcid.org' &&
+    /^\/0009-0000-1674-327x(?:\/|$)/i.test(pathLower)
+  ) {
+    return true;
+  }
+
+  if (
+    baseHost === 'linkedin.com' &&
+    /^\/in\/raggiodev(?:\/|$)/i.test(pathLower)
+  ) {
+    return true;
+  }
+
+  if (
+    (baseHost === 'youtube.com' || baseHost === 'substack.com') &&
+    /^\/@raggiodev(?:\/|$)/i.test(pathLower)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 function isRaggiodevCreatorHq(parsedUrl: URL | null): boolean {
   if (!parsedUrl) {
     return false;
   }
-  const host = parsedUrl.hostname.toLowerCase();
-  const pathLower = parsedUrl.pathname.toLowerCase();
-  if (pathLower.includes('demo-tienda-trucha')) {
-    return false;
-  }
-  return (
-    host === 'raggiodev.com' ||
-    host === 'www.raggiodev.com' ||
-    host.endsWith('.raggiodev.com') ||
-    host === 'raggiodev.github.io'
-  );
+  return isRaggiodevCreatorUrl(parsedUrl.href);
 }
 
 function isVerifiedCaceEventHost(hostname: string): boolean {
@@ -284,7 +478,8 @@ function isVerifiedInstitutionalHost(hostname: string): boolean {
   if (
     hostname.endsWith('.gob.ar') ||
     hostname.endsWith('.gov.ar') ||
-    hostname.endsWith('.mil.ar')
+    hostname.endsWith('.mil.ar') ||
+    hostname.endsWith('.edu.ar')
   ) {
     return true;
   }
@@ -452,13 +647,26 @@ export function detectEcommerceContext(
         : '';
   const isFreeSubdomain = isFreeStoreSubdomain(hostname);
 
-  // 0. Raggiodev Creator Easter Egg (raggiodev.com & raggiodev.github.io when not on demo-tienda-trucha.html)
+  // 0. Raggiodev Creator Easter Egg (all official portfolios, repositories, and social channels of Fernando Andres Raggio)
   if (isRaggiodevCreatorHq(parsedUrl)) {
     return {
       isEcommerce: true,
       isWhitelistedOfficial: true,
-      platform: 'COMERCIO_OFICIAL_AR',
-      platformLabel: '👑 Raggiodev HQ',
+      platform: 'RAGGIODEV_HQ',
+      platformLabel: '🟢 Easter Egg encontrado',
+      isFreeSubdomain: false,
+      hasArsPricing: false,
+      hasCartControls: false,
+    };
+  }
+
+  // 0b. Non-Ecommerce Platforms (GitHub, GitLab, Google, YouTube, X, LinkedIn, ORCID, Linktree, Substack, AI chats, etc.)
+  if (isNonEcommercePlatformHost(hostname)) {
+    return {
+      isEcommerce: false,
+      isWhitelistedOfficial: false,
+      platform: 'NO_ECOMMERCE',
+      platformLabel: 'Sitio Web General',
       isFreeSubdomain: false,
       hasArsPricing: false,
       hasCartControls: false,
@@ -866,15 +1074,15 @@ export function auditStoreSecurity(
   // =========================================================================
   // BRANCH 0: RAGGIODEV CREATOR EASTER EGG (100/100)
   // =========================================================================
-  if (isRaggiodevCreatorHq(parsedUrl)) {
+  if (isRaggiodevCreatorHq(parsedUrl) || ecommerce.platform === 'RAGGIODEV_HQ') {
     scoreBreakdown.push(
       {
-        label: 'Arquitectura Zero-Trust Blue Team',
+        label: '🎮 Easter Egg encontrado (Guiño del Creador)',
         delta: 90,
         type: 'base',
       },
       {
-        label: 'Sello Dorado Raggiodev',
+        label: '✨ Sello Oficial Fernando Andres Raggio (Raggiodev)',
         delta: 10,
         type: 'positive',
       },
@@ -883,10 +1091,11 @@ export function auditStoreSecurity(
     findings.push({
       id: 'raggiodev-creator-easter-egg',
       severity: 'SAFE',
-      title: '👑 Cuartel General Raggiodev Verificado',
+      title: '🟢 ¡Easter Egg encontrado! · Perfil Oficial del Creador',
       detail:
-        '¡Estás en el cuartel general del creador de Escudo Criollo! Desarrollado con orgullo desde Argentina por Fernando Raggio (Full-Stack & Ciberseguridad).',
-      evidence: hostname,
+        '¡Encontraste un secreto oculto de Escudo Criollo! Estás visitando una web o red oficial de su creador: Fernando Andres Raggio (Raggiodev). Nota: este puntaje es un guiño humorístico y de color para la comunidad 😉.',
+      evidence:
+        'Easter Egg Desbloqueado · Desarrollado por Fernando Andres Raggio (Raggiodev)',
     });
 
     return {
@@ -899,7 +1108,7 @@ export function auditStoreSecurity(
       trustScore: 100,
       scoreBreakdown,
       riskLevel: 'SAFE',
-      pillHeadline: '👑 Modo Creador · Raggiodev HQ',
+      pillHeadline: '🎮 Easter Egg encontrado · Raggiodev',
       cuits,
       dataFiscal,
       findings,

@@ -164,6 +164,7 @@ export default defineContentScript({
 
       if (
         currentReport.ecommerce.platform === 'ECOMMERCE_INTERNACIONAL' ||
+        currentReport.ecommerce.platform === 'RAGGIODEV_HQ' ||
         currentReport.riskLevel === 'DANGER'
       ) {
         return;
@@ -284,12 +285,17 @@ export default defineContentScript({
       }, 350);
     };
 
-    ctx.addEventListener(window, 'wxt:locationchange', () => {
+    const checkHrefChange = () => {
       if (window.location.href !== lastAuditedHref) {
         lastAuditedHref = window.location.href;
         scheduleSpaReaudit();
       }
-    });
+    };
+
+    ctx.addEventListener(window, 'wxt:locationchange', checkHrefChange);
+    window.addEventListener('popstate', checkHrefChange);
+    document.addEventListener('turbo:load', checkHrefChange);
+    document.addEventListener('yt-navigate-finish', checkHrefChange);
 
     // Listen to validated IPC requests from Popup and Background Service Worker
     const onRuntimeMessage = (
@@ -348,6 +354,9 @@ export default defineContentScript({
       unsubscribeSettings();
       clearHydrationTimers();
       document.removeEventListener('copy', onDocumentCopy);
+      window.removeEventListener('popstate', checkHrefChange);
+      document.removeEventListener('turbo:load', checkHrefChange);
+      document.removeEventListener('yt-navigate-finish', checkHrefChange);
       browser.runtime.onMessage.removeListener(onRuntimeMessage);
       if (toastTimer !== null) {
         window.clearTimeout(toastTimer);

@@ -65,6 +65,7 @@ export type EcommercePlatform =
   | 'COMERCIO_OFICIAL_AR'
   | 'ECOMMERCE_INTERNACIONAL'
   | 'SITIO_OFICIAL'
+  | 'RAGGIODEV_HQ'
   | 'NO_ECOMMERCE';
 
 export interface EcommerceContext {

@@ -18,11 +18,15 @@ import {
 import {
   HAS_CONTACT_REGEX,
   HAS_LEGAL_ENTITY_REGEX,
+  NON_ECOMMERCE_PLATFORMS,
   VERIFIED_ARGENTINE_RETAILERS,
+  VERIFIED_INTERNATIONAL_PLATFORMS,
+  VERIFIED_OFFICIAL_INSTITUTIONS,
   auditStoreDocument,
   auditStoreSecurity,
   detectEcommerceContext,
   detectEcommercePlatform,
+  isRaggiodevCreatorUrl,
 } from '../src/modules/v01-store-heuristics/detector';
 import {
   AuditFinding,
@@ -56,7 +60,7 @@ function runTest(name: string, fn: () => void): void {
 }
 
 async function main(): Promise<void> {
-  console.log('\n🛡️  ESCUDO CRIOLLO v0.1.3 (by Raggiodev) — Suite de Verificación Forense\n');
+  console.log('\n🛡️  ESCUDO CRIOLLO v0.1.4 (by Raggiodev) — Suite de Verificación Forense\n');
 
   // =========================================================================
   // 1. ENGINE 1: CUIT MODULO 11 & FORENSIC DATA FISCAL
@@ -313,9 +317,9 @@ async function main(): Promise<void> {
   // =========================================================================
   // 3. ENGINE 2: E-COMMERCE DETECTOR, SCAM SCORER & ZERO-TRUST DEFENSES
   // =========================================================================
-  console.log('\n▶ Motor 2: Heurísticas Anti-Estafas, Tiendas Oficiales v0.1.3, Easter Egg y Demo Trucha');
+  console.log('\n▶ Motor 2: Heurísticas Anti-Estafas, Tiendas Oficiales v0.1.4, Easter Egg y Demo Trucha');
 
-  runTest('Reconoce CyberMonday/HotSale (CACE), tienda.coca-cola.com.ar, marcas oficiales y plataformas globales con 100/100 SAFE', () => {
+  runTest('Reconoce CyberMonday/HotSale (CACE), shopee.com.ar, marcas CACE, universidades e internacionales con 100/100 SAFE', () => {
     const minimalSpaShell =
       '<!doctype html><html><head><title>Store</title></head><body><div id="app"></div></body></html>';
 
@@ -335,14 +339,26 @@ async function main(): Promise<void> {
     }
 
     assert.ok(VERIFIED_ARGENTINE_RETAILERS.includes('coca-cola.com.ar'));
+    assert.ok(VERIFIED_ARGENTINE_RETAILERS.includes('shopee.com.ar'));
+    assert.ok(VERIFIED_ARGENTINE_RETAILERS.includes('gadnic.com.ar'));
+    assert.ok(VERIFIED_ARGENTINE_RETAILERS.includes('sommiercenter.com'));
+    assert.ok(VERIFIED_ARGENTINE_RETAILERS.includes('assistcard.com'));
+    assert.ok(VERIFIED_INTERNATIONAL_PLATFORMS.includes('shopee.com'));
+    assert.ok(VERIFIED_OFFICIAL_INSTITUTIONS.includes('palermo.edu'));
     assert.ok(HAS_CONTACT_REGEX.test('Botón de arrepentimiento'));
     assert.ok(HAS_CONTACT_REGEX.test('Defensa de las y los Consumidores'));
     assert.ok(HAS_LEGAL_ENTITY_REGEX.test('Términos y condiciones'));
 
     for (const storeUrl of [
       'https://www.mercadolibre.com.ar/',
+      'https://shopee.com.ar/',
       'https://www.compragamer.com/',
       'https://www.cetrogar.com.ar/',
+      'https://www.gadnic.com.ar/',
+      'https://www.sommiercenter.com/',
+      'https://www.assistcard.com/ar',
+      'https://www.farmacity.com/',
+      'https://www.moov.com.ar/',
       'https://tienda.coca-cola.com.ar/',
       'https://www.siempreencasa.com.ar/',
       'https://www.havanna.com.ar/',
@@ -351,6 +367,7 @@ async function main(): Promise<void> {
       'https://www.fullh4rd.com.ar/',
       'https://tiendamia.com.ar/',
       'https://www.amazon.com/',
+      'https://shopee.com/',
     ]) {
       const doc = createDoc(minimalSpaShell, storeUrl);
       const report = auditStoreSecurity(doc, storeUrl);
@@ -374,44 +391,104 @@ async function main(): Promise<void> {
         `${storeUrl} debía incluir scoreBreakdown transparente`,
       );
     }
+
+    for (const institutionUrl of [
+      'https://www.palermo.edu/',
+      'https://www.uba.ar/',
+      'https://www.utn.edu.ar/',
+      'https://www.afip.gob.ar/',
+    ]) {
+      const doc = createDoc(minimalSpaShell, institutionUrl);
+      const report = auditStoreSecurity(doc, institutionUrl);
+      assert.equal(report.ecommerce.isWhitelistedOfficial, true);
+      assert.equal(report.ecommerce.platform, 'SITIO_OFICIAL');
+      assert.equal(report.riskLevel, 'SAFE');
+      assert.equal(report.trustScore, 100);
+    }
   });
 
-  runTest('Activa Easter Egg Modo Creador (👑 Raggiodev HQ · 100/100) en raggiodev.com y raggiodev.github.io', () => {
+  runTest('Elimina falsos positivos FORGED_STATIC_SEAL en GitHub y plataformas no comerciales (NON_ECOMMERCE_PLATFORMS)', () => {
+    assert.ok(NON_ECOMMERCE_PLATFORMS.includes('github.com'));
+    const githubRepoHtml = `
+      <!doctype html>
+      <html>
+        <head><title>torvalds/linux</title></head>
+        <body>
+          <div class="react-directory-row">
+            <a href="/torvalds/linux/commit/abc123">fix: normalize F.960 Data Fiscal QR validator</a>
+          </div>
+          <article class="markdown-body">
+            <pre><code><a href="#">Formulario 960 AFIP</a></code></pre>
+          </article>
+        </body>
+      </html>
+    `;
+    const ghDoc = createDoc(githubRepoHtml, 'https://github.com/torvalds/linux');
+    const dfAudit = inspectDataFiscalDOM(ghDoc, 'https://github.com/torvalds/linux');
+    assert.equal(dfAudit.status, 'MISSING_DATA_FISCAL');
+
+    const ghReport = auditStoreSecurity(ghDoc, 'https://github.com/torvalds/linux');
+    assert.equal(ghReport.ecommerce.isEcommerce, false);
+    assert.equal(ghReport.ecommerce.platform, 'NO_ECOMMERCE');
+    assert.notEqual(ghReport.riskLevel, 'DANGER');
+  });
+
+  runTest('Activa Easter Egg (🟢 Easter Egg encontrado · 100/100) en todos los perfiles oficiales de Fernando Andres Raggio (Raggiodev)', () => {
     const html = '<!doctype html><html><head><title>Raggiodev</title></head><body></body></html>';
 
     for (const url of [
       'https://raggiodev.com/',
       'https://www.raggiodev.com/',
       'https://raggiodev.github.io/escudo-criollo/',
+      'https://linktr.ee/raggiodev',
+      'https://github.com/raggiodev',
+      'https://github.com/raggiodev/escudo-criollo',
+      'https://orcid.org/0009-0000-1674-327X',
+      'https://www.linkedin.com/in/raggiodev/',
+      'https://x.com/raggiodev',
+      'https://twitter.com/raggiodev',
+      'https://www.youtube.com/@raggiodev',
+      'https://substack.com/@raggiodev',
+      'https://raggiodev.substack.com/',
     ]) {
+      assert.equal(isRaggiodevCreatorUrl(url), true, `${url} debía coincidir en isRaggiodevCreatorUrl`);
       const doc = createDoc(html, url);
       const report = auditStoreSecurity(doc, url);
       assert.equal(report.ecommerce.isEcommerce, true);
-      assert.equal(report.ecommerce.platformLabel, '👑 Raggiodev HQ');
+      assert.equal(report.ecommerce.platform, 'RAGGIODEV_HQ');
+      assert.equal(report.ecommerce.platformLabel, '🟢 Easter Egg encontrado');
       assert.equal(report.trustScore, 100);
       assert.equal(report.riskLevel, 'SAFE');
-      assert.equal(report.pillHeadline, '👑 Modo Creador · Raggiodev HQ');
+      assert.equal(report.pillHeadline, '🎮 Easter Egg encontrado · Raggiodev');
       assert.equal(
         report.scoreBreakdown.some(
           (item: ScoreBreakdownItem) =>
-            item.label === 'Arquitectura Zero-Trust Blue Team' && item.delta === 90,
+            item.label === '🎮 Easter Egg encontrado (Guiño del Creador)' && item.delta === 90,
         ),
         true,
       );
       assert.equal(
         report.scoreBreakdown.some(
           (item: ScoreBreakdownItem) =>
-            item.label === 'Sello Dorado Raggiodev' && item.delta === 10,
+            item.label === '✨ Sello Oficial Fernando Andres Raggio (Raggiodev)' && item.delta === 10,
         ),
         true,
       );
       assert.equal(
-        report.findings.some((f: AuditFinding) =>
-          f.detail.includes('Fernando Raggio (Full-Stack & Ciberseguridad)'),
+        report.findings.some(
+          (f: AuditFinding) =>
+            f.id === 'raggiodev-creator-easter-egg' &&
+            f.title === '🟢 ¡Easter Egg encontrado! · Perfil Oficial del Creador' &&
+            f.detail.includes('Fernando Andres Raggio (Raggiodev)'),
         ),
         true,
       );
     }
+
+    assert.equal(
+      isRaggiodevCreatorUrl('https://raggiodev.github.io/escudo-criollo/demo-tienda-trucha.html'),
+      false,
+    );
   });
 
   runTest('Detecta las 4 señales de estafa en docs/demo-tienda-trucha.html (0/100 DANGER en GitHub Pages y file://)', () => {
@@ -632,7 +709,7 @@ async function main(): Promise<void> {
     assert.deepEqual(sanitizedSettings.dismissedDomains, ['tiendatrucha.com']);
   });
 
-  console.log(`\n✨ ÉXITO TOTAL: ${passedTests}/${passedTests} aserciones forenses v0.1.3 verificadas con 0 errores.\n`);
+  console.log(`\n✨ ÉXITO TOTAL: ${passedTests}/${passedTests} aserciones forenses v0.1.4 verificadas con 0 errores.\n`);
 }
 
 try {

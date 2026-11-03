@@ -22,6 +22,7 @@ import {
 import { browser } from 'wxt/browser';
 import { sanitizeUrl } from '../../src/modules/v01-clean-links/sanitizer';
 import { validateCUIT } from '../../src/modules/v01-cuit-arca/validator';
+import { isRaggiodevCreatorUrl } from '../../src/modules/v01-store-heuristics/detector';
 import {
   AuditFinding,
   DEFAULT_SETTINGS,
@@ -126,6 +127,60 @@ function buildFallbackUrlReport(rawTabUrl: string): StoreAuditReport | null {
     return null;
   }
   const hostname = safeTruncate(parsed.hostname.toLowerCase(), 256);
+
+  if (isRaggiodevCreatorUrl(parsed.href)) {
+    return {
+      url: safeTruncate(parsed.href, 2048),
+      hostname,
+      pageTitle: hostname,
+      isHttps: true,
+      timestamp: Date.now(),
+      ecommerce: {
+        isEcommerce: true,
+        isWhitelistedOfficial: true,
+        platform: 'RAGGIODEV_HQ',
+        platformLabel: '🟢 Easter Egg encontrado',
+        isFreeSubdomain: false,
+        hasArsPricing: false,
+        hasCartControls: false,
+      },
+      trustScore: 100,
+      scoreBreakdown: [
+        {
+          label: '🎮 Easter Egg encontrado (Guiño del Creador)',
+          delta: 90,
+          type: 'base',
+        },
+        {
+          label: '✨ Sello Oficial Fernando Andres Raggio (Raggiodev)',
+          delta: 10,
+          type: 'positive',
+        },
+      ],
+      riskLevel: 'SAFE',
+      pillHeadline: '🎮 Easter Egg encontrado · Raggiodev',
+      cuits: [],
+      dataFiscal: {
+        status: 'MISSING_DATA_FISCAL',
+        officialQrUrl: null,
+        forgedEvidence: null,
+        summary:
+          'Perfil oficial del creador de Escudo Criollo: Fernando Andres Raggio (Raggiodev).',
+      },
+      findings: [
+        {
+          id: 'raggiodev-creator-easter-egg',
+          severity: 'SAFE',
+          title: '🟢 ¡Easter Egg encontrado! · Perfil Oficial del Creador',
+          detail:
+            '¡Encontraste un secreto oculto de Escudo Criollo! Estás visitando una web o red oficial de su creador: Fernando Andres Raggio (Raggiodev). Nota: este puntaje es un guiño humorístico y de color para la comunidad 😉.',
+          evidence:
+            'Easter Egg Desbloqueado · Desarrollado por Fernando Andres Raggio (Raggiodev)',
+        },
+      ],
+    };
+  }
+
   const isHttps = parsed.protocol === 'https:';
   const scoreBreakdown: ScoreBreakdownItem[] = [
     { label: 'Base vista previa URL', delta: 60, type: 'base' },
@@ -427,7 +482,7 @@ export const App: React.FC = () => {
                     border: '1px solid rgba(251, 191, 36, 0.4)',
                   }}
                 >
-                  v0.1.3
+                  v0.1.4
                 </span>
               </div>
               <p className="text-2xs text-indigo-100/90 m-0 mt-0.5">
@@ -637,7 +692,22 @@ export const App: React.FC = () => {
                         >
                           {riskPalette.label}
                         </span>
-                        <span className="inline-flex items-center rounded-md border border-raggio-border bg-raggio-hover px-1.5 py-0.5 text-2xs font-semibold text-raggio-gold">
+                        <span
+                          className="inline-flex items-center rounded-md border px-1.5 py-0.5 text-2xs font-semibold"
+                          style={
+                            report.ecommerce.platform === 'RAGGIODEV_HQ'
+                              ? {
+                                  color: '#34D399',
+                                  backgroundColor: 'rgba(6, 78, 59, 0.75)',
+                                  borderColor: '#10B981',
+                                }
+                              : {
+                                  color: '#FBBF24',
+                                  backgroundColor: '#1F193D',
+                                  borderColor: '#2B2354',
+                                }
+                          }
+                        >
                           {report.ecommerce.platformLabel}
                         </span>
                       </div>
@@ -769,7 +839,8 @@ export const App: React.FC = () => {
                 </section>
 
                 {/* CUIT & Data Fiscal ARCA Card (shown on Argentine/local sites) */}
-                {report.ecommerce.platform !== 'ECOMMERCE_INTERNACIONAL' && (
+                {report.ecommerce.platform !== 'ECOMMERCE_INTERNACIONAL' &&
+                  report.ecommerce.platform !== 'RAGGIODEV_HQ' && (
                   <section
                     aria-label="Estado fiscal CUIT y ARCA"
                     className="rounded-2xl border border-raggio-border bg-raggio-card p-3 space-y-2"
@@ -1255,7 +1326,7 @@ export const App: React.FC = () => {
                     Mostrar insignia flotante en tiendas online
                   </div>
                   <p className="mt-0.5 text-2xs text-slate-400 m-0 leading-relaxed">
-                    Inyecta la píldora estilo Steamcito cuando detecta carritos o e-commerce.
+                    Inyecta la píldora preventiva no intrusiva cuando detecta carritos o e-commerce.
                   </p>
                 </div>
                 <button
@@ -1450,7 +1521,7 @@ export const App: React.FC = () => {
       {/* Raggiodev Signature Footer */}
       <footer className="border-t border-raggio-border bg-raggio-card px-3.5 py-2.5 text-center">
         <div className="text-2xs text-slate-300">
-          <span className="font-mono font-semibold">Escudo Criollo v0.1.1</span>{' '}
+          <span className="font-mono font-semibold">Escudo Criollo v0.1.4</span>{' '}
           · Desarrollado por{' '}
           <a
             href={RAGGIODEV_PORTFOLIO_URL}
