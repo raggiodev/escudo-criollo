@@ -29,8 +29,8 @@ const VERIFIED_CACE_EVENT_DOMAINS = [
   'cace.org.ar',
 ] as const;
 
-// Verified National Argentine Retailers, Marketplaces & Telco Stores (isEcommerce: true, 100/100 SAFE)
-const VERIFIED_ARGENTINE_ECOMMERCE_DOMAINS = [
+// Verified National Argentine Retailers, Marketplaces, Official Brands & Tech Stores (isEcommerce: true, 100/100 SAFE)
+export const VERIFIED_ARGENTINE_RETAILERS = [
   'mercadolibre.com.ar',
   'mercadolibre.com',
   'mercadopago.com.ar',
@@ -82,7 +82,36 @@ const VERIFIED_ARGENTINE_ECOMMERCE_DOMAINS = [
   'tiendapersonal.com.ar',
   'tienda.claro.com.ar',
   'tienda.movistar.com.ar',
+  'coca-cola.com.ar',
+  'siempreencasa.com.ar',
+  'taura.com.ar',
+  'arcorencasa.com',
+  'havanna.com.ar',
+  'cafemartinez.com',
+  'gridohelado.com',
+  'nespresso.com',
+  'levi.com.ar',
+  'zara.com',
+  'dafiti.com.ar',
+  'stylestore.com.ar',
+  'parfumerie.com.ar',
+  'juleriaque.com.ar',
+  'pigmento.com.ar',
+  'openfarma.com.ar',
+  'farmaonline.com',
+  'sportline.com.ar',
+  'dash.com.ar',
+  'diggit.com.ar',
+  'start.com.ar',
+  'maximus.com.ar',
+  'venex.com.ar',
+  'fullh4rd.com.ar',
+  'mexx.com.ar',
+  'gezatek.com.ar',
+  'logg.com.ar',
 ] as const;
+
+const VERIFIED_ARGENTINE_ECOMMERCE_DOMAINS = VERIFIED_ARGENTINE_RETAILERS;
 
 // Verified International E-Commerce & Cross-Border Courier Platforms (isEcommerce: true, 96/100 SAFE)
 const VERIFIED_INTERNATIONAL_ECOMMERCE_DOMAINS = [
@@ -178,14 +207,18 @@ const ARS_PRICE_REGEX =
 const AGGRESSIVE_TRANSFER_SCAM_REGEX =
   /(?:\b(?:25|[3-8]\d)\s*%\s*(?:de\s+)?(?:off|descuento|dto|ahorro)\b[^\n.]{0,50}\btransferencia\b)|(?:\btransferencia\b[^\n.]{0,50}\b(?:25|[3-8]\d)\s*%\s*(?:de\s+)?(?:off|descuento|dto)\b)|(?:\b(?:50|60|70|80)\s*%\s*off\s+en\s+toda\s+la\s+tienda\b)|(?:\b[23]\s*x\s*1\s+en\s+tod[oa](?:s|\s+la\s+tienda)?\b)/i;
 
-const CONTACT_PHONE_OR_WA_REGEX =
-  /\b(?:whatsapp|tel[eé]fono|atenci[oó]n\s+al\s+cliente|\+?54\s*9?\s*\d{2,4}[-\s]?\d{3,4}[-\s]?\d{4})\b/i;
+export const HAS_CONTACT_REGEX =
+  /\b(?:whatsapp|tel[eé]fono|atenci[oó]n\s+al\s+cliente|bot[oó]n\s+de\s+arrepentimiento|defensa\s+de\s+las\s+y\s+los\s+consumidores|defensa\s+del\s+consumidor|\+?54\s*9?\s*\d{2,4}[-\s]?\d{3,4}[-\s]?\d{4})\b/i;
+
+const CONTACT_PHONE_OR_WA_REGEX = HAS_CONTACT_REGEX;
 
 const PHYSICAL_ADDRESS_REGEX =
   /\b(?:av\.|avenida|calle|boulevard|bv\.|piso|local\s+\d|sucursal|domicilio|direcci[oó]n|caba|capital\s+federal|buenos\s+aires|c[oó]rdoba|rosario|mendoza|tucum[aá]n|la\s+plata|mar\s+del\s+plata)\b/i;
 
-const RAZON_SOCIAL_REGEX =
-  /\b(?:raz[oó]n\s+social|s\.?r\.?l\.?|s\.?a\.?s\.?|s\.?a\.?|sociedad\s+an[oó]nima)\b/i;
+export const HAS_LEGAL_ENTITY_REGEX =
+  /\b(?:raz[oó]n\s+social|s\.?r\.?l\.?|s\.?a\.?s\.?|s\.?a\.?|sociedad\s+an[oó]nima|bot[oó]n\s+de\s+arrepentimiento|defensa\s+de\s+las\s+y\s+los\s+consumidores|t[eé]rminos\s+y\s+condiciones)\b/i;
+
+const RAZON_SOCIAL_REGEX = HAS_LEGAL_ENTITY_REGEX;
 
 const SOCIAL_DOMAINS = [
   'instagram.com',
@@ -198,6 +231,23 @@ const SOCIAL_DOMAINS = [
 
 function matchesDomainOrSubdomain(hostname: string, target: string): boolean {
   return hostname === target || hostname.endsWith(`.${target}`);
+}
+
+function isRaggiodevCreatorHq(parsedUrl: URL | null): boolean {
+  if (!parsedUrl) {
+    return false;
+  }
+  const host = parsedUrl.hostname.toLowerCase();
+  const pathLower = parsedUrl.pathname.toLowerCase();
+  if (pathLower.includes('demo-tienda-trucha')) {
+    return false;
+  }
+  return (
+    host === 'raggiodev.com' ||
+    host === 'www.raggiodev.com' ||
+    host.endsWith('.raggiodev.com') ||
+    host === 'raggiodev.github.io'
+  );
 }
 
 function isVerifiedCaceEventHost(hostname: string): boolean {
@@ -391,8 +441,29 @@ export function detectEcommerceContext(
   precomputedDataFiscal?: DataFiscalAuditResult,
 ): EcommerceContext {
   const parsedUrl = getSafeDocumentUrl(doc, urlStr);
-  const hostname = parsedUrl ? parsedUrl.hostname.toLowerCase() : '';
+  const isFileDemoScamStore =
+    parsedUrl?.protocol === 'file:' &&
+    parsedUrl.pathname.toLowerCase().includes('demo-tienda-trucha');
+  const hostname =
+    parsedUrl && parsedUrl.hostname
+      ? parsedUrl.hostname.toLowerCase()
+      : isFileDemoScamStore
+        ? 'urbansneakers-ar.mitiendanube.com'
+        : '';
   const isFreeSubdomain = isFreeStoreSubdomain(hostname);
+
+  // 0. Raggiodev Creator Easter Egg (raggiodev.com & raggiodev.github.io when not on demo-tienda-trucha.html)
+  if (isRaggiodevCreatorHq(parsedUrl)) {
+    return {
+      isEcommerce: true,
+      isWhitelistedOfficial: true,
+      platform: 'COMERCIO_OFICIAL_AR',
+      platformLabel: '👑 Raggiodev HQ',
+      isFreeSubdomain: false,
+      hasArsPricing: false,
+      hasCartControls: false,
+    };
+  }
 
   // 1. MercadoLibre & MercadoShops Official
   if (
@@ -740,13 +811,24 @@ export function auditStoreSecurity(
   urlStr: string,
 ): StoreAuditReport {
   const parsedUrl = getSafeDocumentUrl(doc, urlStr);
+  const isFileProtocol = parsedUrl ? parsedUrl.protocol === 'file:' : false;
+  const isFileDemoScamStore =
+    isFileProtocol &&
+    Boolean(parsedUrl?.pathname.toLowerCase().includes('demo-tienda-trucha'));
   const safeUrl = parsedUrl
     ? safeTruncate(parsedUrl.href, MAX_URL_LENGTH)
     : safeTruncate(urlStr, MAX_URL_LENGTH);
-  const hostname = parsedUrl
-    ? safeTruncate(parsedUrl.hostname.toLowerCase(), 256)
-    : 'desconocido';
-  const isHttps = parsedUrl ? parsedUrl.protocol === 'https:' : false;
+  const rawHost = parsedUrl ? parsedUrl.hostname.toLowerCase() : '';
+  const hostname = rawHost
+    ? safeTruncate(rawHost, 256)
+    : isFileDemoScamStore
+      ? 'urbansneakers-ar.mitiendanube.com'
+      : isFileProtocol
+        ? 'archivo-local.ar'
+        : 'desconocido';
+  const isHttps = parsedUrl
+    ? parsedUrl.protocol === 'https:' || isFileProtocol
+    : false;
   const pageTitle = safeTruncate(
     typeof doc.title === 'string' ? doc.title : '',
     256,
@@ -780,6 +862,49 @@ export function auditStoreSecurity(
 
   const findings: AuditFinding[] = [];
   const scoreBreakdown: ScoreBreakdownItem[] = [];
+
+  // =========================================================================
+  // BRANCH 0: RAGGIODEV CREATOR EASTER EGG (100/100)
+  // =========================================================================
+  if (isRaggiodevCreatorHq(parsedUrl)) {
+    scoreBreakdown.push(
+      {
+        label: 'Arquitectura Zero-Trust Blue Team',
+        delta: 90,
+        type: 'base',
+      },
+      {
+        label: 'Sello Dorado Raggiodev',
+        delta: 10,
+        type: 'positive',
+      },
+    );
+
+    findings.push({
+      id: 'raggiodev-creator-easter-egg',
+      severity: 'SAFE',
+      title: '👑 Cuartel General Raggiodev Verificado',
+      detail:
+        '¡Estás en el cuartel general del creador de Escudo Criollo! Desarrollado con orgullo desde Argentina por Fernando Raggio (Full-Stack & Ciberseguridad).',
+      evidence: hostname,
+    });
+
+    return {
+      url: safeUrl,
+      hostname,
+      pageTitle,
+      isHttps: true,
+      timestamp: Date.now(),
+      ecommerce,
+      trustScore: 100,
+      scoreBreakdown,
+      riskLevel: 'SAFE',
+      pillHeadline: '👑 Modo Creador · Raggiodev HQ',
+      cuits,
+      dataFiscal,
+      findings,
+    };
+  }
 
   // =========================================================================
   // BRANCH A: VERIFIED INTERNATIONAL & CROSS-BORDER COURIER PLATFORMS (100/100)

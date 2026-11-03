@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import { JSDOM } from 'jsdom';
 import {
   extractCUITsFromText,
@@ -14,6 +16,9 @@ import {
   sanitizeUrl,
 } from '../src/modules/v01-clean-links/sanitizer';
 import {
+  HAS_CONTACT_REGEX,
+  HAS_LEGAL_ENTITY_REGEX,
+  VERIFIED_ARGENTINE_RETAILERS,
   auditStoreDocument,
   auditStoreSecurity,
   detectEcommerceContext,
@@ -51,7 +56,7 @@ function runTest(name: string, fn: () => void): void {
 }
 
 async function main(): Promise<void> {
-  console.log('\n🛡️  ESCUDO CRIOLLO v0.1.1 (by Raggiodev) — Suite de Verificación Forense\n');
+  console.log('\n🛡️  ESCUDO CRIOLLO v0.1.3 (by Raggiodev) — Suite de Verificación Forense\n');
 
   // =========================================================================
   // 1. ENGINE 1: CUIT MODULO 11 & FORENSIC DATA FISCAL
@@ -95,6 +100,7 @@ async function main(): Promise<void> {
     assert.equal(isValidCUIT('30-70308853-9'), false);
     assert.equal(isValidCUIT('30-70308853-0'), false);
     assert.equal(isValidCUIT('33-69345023-1'), false);
+    assert.equal(isValidCUIT('30-71234567-0'), false);
   });
 
   runTest('Rechaza secuencias repetitivas/triviales y prefijos inexistentes', () => {
@@ -307,9 +313,9 @@ async function main(): Promise<void> {
   // =========================================================================
   // 3. ENGINE 2: E-COMMERCE DETECTOR, SCAM SCORER & ZERO-TRUST DEFENSES
   // =========================================================================
-  console.log('\n▶ Motor 2: Heurísticas Anti-Estafas de Tiendas, Registros Oficiales y Desglose');
+  console.log('\n▶ Motor 2: Heurísticas Anti-Estafas, Tiendas Oficiales v0.1.3, Easter Egg y Demo Trucha');
 
-  runTest('Reconoce CyberMonday/HotSale (CACE), retailers argentinos y plataformas globales con 100/100 SAFE en HTTPS', () => {
+  runTest('Reconoce CyberMonday/HotSale (CACE), tienda.coca-cola.com.ar, marcas oficiales y plataformas globales con 100/100 SAFE', () => {
     const minimalSpaShell =
       '<!doctype html><html><head><title>Store</title></head><body><div id="app"></div></body></html>';
 
@@ -328,10 +334,21 @@ async function main(): Promise<void> {
       assert.equal(eventReport.trustScore, 100);
     }
 
+    assert.ok(VERIFIED_ARGENTINE_RETAILERS.includes('coca-cola.com.ar'));
+    assert.ok(HAS_CONTACT_REGEX.test('Botón de arrepentimiento'));
+    assert.ok(HAS_CONTACT_REGEX.test('Defensa de las y los Consumidores'));
+    assert.ok(HAS_LEGAL_ENTITY_REGEX.test('Términos y condiciones'));
+
     for (const storeUrl of [
       'https://www.mercadolibre.com.ar/',
       'https://www.compragamer.com/',
       'https://www.cetrogar.com.ar/',
+      'https://tienda.coca-cola.com.ar/',
+      'https://www.siempreencasa.com.ar/',
+      'https://www.havanna.com.ar/',
+      'https://www.venex.com.ar/',
+      'https://www.maximus.com.ar/',
+      'https://www.fullh4rd.com.ar/',
       'https://tiendamia.com.ar/',
       'https://www.amazon.com/',
     ]) {
@@ -356,6 +373,69 @@ async function main(): Promise<void> {
         report.scoreBreakdown.length >= 2,
         `${storeUrl} debía incluir scoreBreakdown transparente`,
       );
+    }
+  });
+
+  runTest('Activa Easter Egg Modo Creador (👑 Raggiodev HQ · 100/100) en raggiodev.com y raggiodev.github.io', () => {
+    const html = '<!doctype html><html><head><title>Raggiodev</title></head><body></body></html>';
+
+    for (const url of [
+      'https://raggiodev.com/',
+      'https://www.raggiodev.com/',
+      'https://raggiodev.github.io/escudo-criollo/',
+    ]) {
+      const doc = createDoc(html, url);
+      const report = auditStoreSecurity(doc, url);
+      assert.equal(report.ecommerce.isEcommerce, true);
+      assert.equal(report.ecommerce.platformLabel, '👑 Raggiodev HQ');
+      assert.equal(report.trustScore, 100);
+      assert.equal(report.riskLevel, 'SAFE');
+      assert.equal(report.pillHeadline, '👑 Modo Creador · Raggiodev HQ');
+      assert.equal(
+        report.scoreBreakdown.some(
+          (item: ScoreBreakdownItem) =>
+            item.label === 'Arquitectura Zero-Trust Blue Team' && item.delta === 90,
+        ),
+        true,
+      );
+      assert.equal(
+        report.scoreBreakdown.some(
+          (item: ScoreBreakdownItem) =>
+            item.label === 'Sello Dorado Raggiodev' && item.delta === 10,
+        ),
+        true,
+      );
+      assert.equal(
+        report.findings.some((f: AuditFinding) =>
+          f.detail.includes('Fernando Raggio (Full-Stack & Ciberseguridad)'),
+        ),
+        true,
+      );
+    }
+  });
+
+  runTest('Detecta las 4 señales de estafa en docs/demo-tienda-trucha.html (0/100 DANGER en GitHub Pages y file://)', () => {
+    const demoPath = path.resolve(process.cwd(), 'docs', 'demo-tienda-trucha.html');
+    const demoHtml = fs.readFileSync(demoPath, 'utf-8');
+
+    for (const demoUrl of [
+      'https://raggiodev.github.io/escudo-criollo/demo-tienda-trucha.html',
+      'file:///C:/dev/escudo-criollo/docs/demo-tienda-trucha.html',
+      'http://localhost:3000/demo-tienda-trucha.html',
+    ]) {
+      const doc = createDoc(demoHtml, demoUrl);
+      const report = auditStoreSecurity(doc, demoUrl);
+      assert.equal(report.ecommerce.isEcommerce, true);
+      assert.equal(report.riskLevel, 'DANGER');
+      assert.equal(report.trustScore, 0);
+      assert.equal(report.pillHeadline, 'Alerta: Posible Tienda Trucha');
+
+      const findingIds = new Set(
+        report.findings.map((f: AuditFinding) => f.id),
+      );
+      assert.ok(findingIds.has('forged-data-fiscal-seal'));
+      assert.ok(findingIds.has('invalid-cuit-modulo11'));
+      assert.ok(findingIds.has('broken-footer-social-links'));
     }
   });
 
@@ -552,7 +632,7 @@ async function main(): Promise<void> {
     assert.deepEqual(sanitizedSettings.dismissedDomains, ['tiendatrucha.com']);
   });
 
-  console.log(`\n✨ ÉXITO TOTAL: ${passedTests}/${passedTests} aserciones forenses v0.1.1 verificadas con 0 errores.\n`);
+  console.log(`\n✨ ÉXITO TOTAL: ${passedTests}/${passedTests} aserciones forenses v0.1.3 verificadas con 0 errores.\n`);
 }
 
 try {

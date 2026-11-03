@@ -1,4 +1,4 @@
-import { MAX_SCANNED_TEXT_CHARS, parseSafeHttpUrl, safeTruncate } from '../types';
+import { MAX_SCANNED_TEXT_CHARS, safeTruncate } from '../types';
 
 /**
  * DOM Clobbering-immune runtime element guards.
@@ -37,19 +37,42 @@ export function isImageElement(node: unknown, doc?: Document): node is HTMLImage
   return Boolean(viewCtor && node instanceof viewCtor);
 }
 
+function parseDocumentLocationUrl(rawUrl: unknown): URL | null {
+  if (typeof rawUrl !== 'string') {
+    return null;
+  }
+  const trimmed = rawUrl.trim();
+  if (!trimmed || trimmed.length > 4096) {
+    return null;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (
+      parsed.protocol === 'https:' ||
+      parsed.protocol === 'http:' ||
+      parsed.protocol === 'file:'
+    ) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Safely retrieves the document base HTTP(S) URL without trusting clobbered properties.
+ * Safely retrieves the document base HTTP(S) or local file:// URL without trusting clobbered properties.
  */
 export function getSafeDocumentUrl(doc: Document, fallbackUrl?: string): URL | null {
   if (fallbackUrl) {
-    const parsedFallback = parseSafeHttpUrl(fallbackUrl);
+    const parsedFallback = parseDocumentLocationUrl(fallbackUrl);
     if (parsedFallback) {
       return parsedFallback;
     }
   }
   try {
     if (typeof doc.URL === 'string') {
-      const parsedDocUrl = parseSafeHttpUrl(doc.URL);
+      const parsedDocUrl = parseDocumentLocationUrl(doc.URL);
       if (parsedDocUrl) {
         return parsedDocUrl;
       }

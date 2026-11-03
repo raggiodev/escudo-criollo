@@ -1,9 +1,10 @@
-# 🛡️ Escudo Criollo `v0.1.1` *(by [Raggiodev](https://raggiodev.com))*
+# 🛡️ Escudo Criollo `v0.1.3` *(by [Raggiodev](https://raggiodev.com))*
 
 > **El “Steamcito” de la seguridad y privacidad para tus compras online en Argentina y Latinoamérica.**
 > Extensión **100% local (Zero-Server)** para Google Chrome (Manifest V3) construida con **WXT + React 18 + TypeScript + Tailwind CSS + Lucide Icons**.
 
 🌐 **Sitio Web & Metodología:** [https://raggiodev.github.io/escudo-criollo/](https://raggiodev.github.io/escudo-criollo/)
+🚨 **Simulador Interactivo de Tienda Trucha:** [https://raggiodev.github.io/escudo-criollo/demo-tienda-trucha.html](https://raggiodev.github.io/escudo-criollo/demo-tienda-trucha.html)
 🔒 **Política de Privacidad Oficial:** [https://raggiodev.github.io/escudo-criollo/privacidad.html](https://raggiodev.github.io/escudo-criollo/privacidad.html)
 💼 **Autor / Portfolio:** [Raggiodev (raggiodev.com)](https://raggiodev.com)
 
@@ -20,7 +21,7 @@ Así como *Steamcito* revolucionó la transparencia de precios en Argentina inye
 
 ---
 
-## ✨ Los 4 Motores Forenses (`v0.1.1`)
+## ✨ Los 4 Motores Forenses (`v0.1.3`)
 
 ### 1. Inspector Forense de Sello Data Fiscal F.960 (`src/modules/v01-cuit-arca/validator.ts`)
 - Verifica si los sellos Data Fiscal enlazan realmente a dominios oficiales (`*.afip.gob.ar` / `*.arca.gob.ar`) con parámetros de validación activos.
@@ -85,7 +86,7 @@ npm run verify
 # 3. Compilar extensión de producción (.output/chrome-mv3)
 npm run build
 
-# 4. Generar paquete ZIP listo para Chrome Web Store (.output/escudo-criollo-0.1.1-chrome.zip)
+# 4. Generar paquete ZIP listo para Chrome Web Store (.output/escudo-criollo-0.1.3-chrome.zip)
 npm run zip
 ```
 

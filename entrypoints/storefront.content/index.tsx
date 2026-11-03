@@ -26,7 +26,7 @@ const SPA_HYDRATION_CHECKPOINTS_MS = [600, 1600, 3200] as const;
 
 export default defineContentScript({
   allFrames: false,
-  matches: ['http://*/*', 'https://*/*'],
+  matches: ['http://*/*', 'https://*/*', 'file:///*'],
   excludeMatches: [
     '*://camo.githubusercontent.com/*',
     '*://*/*.svg',

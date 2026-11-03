@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content="Tiendanube" />
+    <title>UrbanSneakers AR — Liquidación CyberMonday 50% OFF + 35% Extra Transferencia</title>
+    <style>
+      :root {
+        --scam-bg: #f8fafc;
+        --scam-surface: #ffffff;
+        --scam-dark: #0f172a;
+        --scam-red: #dc2626;
+        --scam-amber: #f59e0b;
+        --scam-green: #16a34a;
+        --scam-border: #e2e8f0;
+        --scam-muted: #64748b;
+        --font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: var(--font-sans);
+        background-color: var(--scam-bg);
+        color: var(--scam-dark);
+        line-height: 1.5;
+      }
+
+      /* Raggiodev Simulation Warning Ribbon */
+      .sim-ribbon {
+        background-color: #0d0b18;
+        color: #f8fafc;
+        border-block-end: 2px solid #fbbf24;
+        padding: 0.55rem 1rem;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .sim-ribbon a {
+        color: #fbbf24;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .sim-ribbon a:hover {
+        text-decoration: underline;
+      }
+
+      /* Scam Store Urgent Promo Header */
+      .promo-banner {
+        background: linear-gradient(90deg, #991b1b 0%, #dc2626 50%, #b91c1c 100%);
+        color: #ffffff;
+        text-align: center;
+        padding: 0.75rem 1rem;
+        font-weight: 800;
+        font-size: 0.92rem;
+        letter-spacing: 0.01em;
+      }
+
+      .store-navbar {
+        background-color: var(--scam-surface);
+        border-block-end: 1px solid var(--scam-border);
+        padding: 1rem 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .store-logo {
+        font-size: 1.4rem;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+        color: var(--scam-dark);
+      }
+
+      .store-logo span {
+        color: var(--scam-red);
+      }
+
+      .cart-button-top {
+        background-color: var(--scam-dark);
+        color: #ffffff;
+        border: none;
+        border-radius: 9999px;
+        padding: 0.55rem 1.1rem;
+        font-weight: 700;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      .container {
+        width: min(1140px, calc(100% - 2rem));
+        margin-inline: auto;
+      }
+
+      .hero-banner {
+        margin-block: 1.5rem;
+        border-radius: 1.25rem;
+        background: linear-gradient(135deg, #111827 0%, #1e293b 60%, #7f1d1d 100%);
+        color: #ffffff;
+        padding: 2.25rem 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        box-shadow: 0 15px 35px -10px rgba(15, 23, 42, 0.35);
+      }
+
+      .hero-tag {
+        display: inline-block;
+        align-self: flex-start;
+        background-color: var(--scam-amber);
+        color: #0f172a;
+        font-weight: 900;
+        font-size: 0.76rem;
+        padding: 0.25rem 0.7rem;
+        border-radius: 9999px;
+        text-transform: uppercase;
+      }
+
+      .hero-banner h1 {
+        margin: 0;
+        font-size: clamp(1.65rem, 3.5vw, 2.5rem);
+        font-weight: 900;
+        line-height: 1.15;
+      }
+
+      .hero-banner p {
+        margin: 0;
+        color: #e2e8f0;
+        font-size: 1rem;
+        max-inline-size: 65ch;
+      }
+
+      /* Product Grid using modern-web-guidance card & subgrid pattern */
+      .products-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1.25rem;
+        margin-block: 2rem 3rem;
+      }
+
+      article.product-card {
+        container-type: inline-size;
+        display: grid;
+        grid-row: span 4;
+        grid-template-rows: subgrid;
+        gap: 0.75rem;
+        background-color: var(--scam-surface);
+        border: 1px solid var(--scam-border);
+        border-radius: 1rem;
+        padding: 1rem;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+      }
+
+      article.product-card > img {
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        object-fit: cover;
+        border-radius: 0.75rem;
+        background-color: #f1f5f9;
+      }
+
+      article.product-card > header h2 {
+        font-size: 1.02rem;
+        font-weight: 800;
+        margin: 0.25rem 0 0;
+        color: var(--scam-dark);
+      }
+
+      .badge-2x1 {
+        display: inline-block;
+        font-size: 0.7rem;
+        font-weight: 800;
+        background-color: #fee2e2;
+        color: #b91c1c;
+        padding: 0.15rem 0.5rem;
+        border-radius: 0.35rem;
+        text-transform: uppercase;
+      }
+
+      .price-stack p {
+        margin: 0.15rem 0;
+      }
+
+      .old-price {
+        text-decoration: line-through;
+        color: var(--scam-muted);
+        font-size: 0.85rem;
+      }
+
+      .current-price {
+        font-size: 1.45rem;
+        font-weight: 900;
+        color: var(--scam-dark);
+      }
+
+      .transfer-highlight {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--scam-green);
+        background-color: #dcfce7;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.4rem;
+        display: inline-block;
+      }
+
+      article.product-card > footer {
+        display: flex;
+        gap: 0.5rem;
+        padding-block-start: 0.5rem;
+      }
+
+      .btn-buy {
+        flex: 1;
+        background-color: var(--scam-red);
+        color: #ffffff;
+        border: none;
+        border-radius: 0.6rem;
+        padding: 0.65rem 0.85rem;
+        font-weight: 800;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      .btn-buy:hover {
+        background-color: #b91c1c;
+      }
+
+      /* Scam Store Footer with All 4 Forensic Red Flags */
+      footer.site-footer {
+        background-color: #0f172a;
+        color: #cbd5e1;
+        padding: 2.5rem 1.5rem 6rem;
+        margin-block-start: 3rem;
+      }
+
+      .footer-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 2rem;
+      }
+
+      .footer-col h3 {
+        color: #ffffff;
+        font-size: 0.95rem;
+        margin: 0 0 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .footer-col p {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        margin: 0.35rem 0;
+      }
+
+      .social-links {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-block-start: 0.5rem;
+      }
+
+      .social-links a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background-color: #1e293b;
+        color: #f8fafc;
+        padding: 0.45rem 0.85rem;
+        border-radius: 0.5rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1px solid #334155;
+      }
+
+      .fake-seal-box {
+        display: inline-block;
+        background-color: #ffffff;
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        margin-block-start: 0.5rem;
+      }
+
+      .fake-seal-box img {
+        display: block;
+        width: 96px;
+        height: 124px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Raggiodev Educational Demo Notice -->
+    <div class="sim-ribbon" role="region" aria-label="Aviso de simulación educativa">
+      <span>
+        🧪 <strong>DEMO FORENSE ESCUDO CRIOLLO (v0.1.3):</strong> Esta página simula una tienda fraudulenta de anuncios con CUIT inválido, QR Data Fiscal estático sin enlace oficial, redes rotas y descuentos agresivos por transferencia.
+      </span>
+      <a href="./index.html">← Volver a Escudo Criollo</a>
+    </div>
+
+    <!-- Aggressive Transfer-Only Promo Header -->
+    <header class="promo-banner">
+      🔥 ¡LIQUIDACIÓN CYBERMONDAY! 50% OFF en toda la tienda + 35% de descuento EXTRA pagando por transferencia bancaria (CBU/Alias) · ¡2x1 en toda la tienda! 🔥
+    </header>
+
+    <div class="store-navbar">
+      <div class="store-logo">URBAN<span>SNEAKERS</span> AR</div>
+      <button type="button" class="cart-button-top" aria-label="Mi carrito">
+        🛒 Mi carrito (2)
+      </button>
+    </div>
+
+    <main class="container">
+      <section class="hero-banner" aria-label="Oferta principal">
+        <span class="hero-tag">⚡ Últimos pares disponibles · Envío gratis hoy</span>
+        <h1>UrbanSneakers AR — Liquidación 50% OFF en toda la tienda</h1>
+        <p>
+          Aprovechá el 2x1 en toda la tienda y obtené un <strong>35% de descuento por transferencia bancaria</strong> inmediata a nuestro Alias CBU. ¡Stock limitado sin reposición!
+        </p>
+      </section>
+
+      <section class="products-grid" aria-label="Catálogo en liquidación">
+        <!-- Product Card 1 -->
+        <article class="product-card">
+          <img
+            src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='22' font-weight='bold' fill='%23334155'%3EAir Jordan Retro High%3C/text%3E%3C/svg%3E"
+            alt="Zapatillas Air Jordan Retro High"
+          />
+          <header>
+            <span class="badge-2x1">🔥 2x1 + 50% OFF</span>
+            <h2>Zapatillas Air Jordan 1 Retro High OG Importadas</h2>
+          </header>
+          <div class="price-stack">
+            <p class="old-price">Antes: $ 189.990</p>
+            <p class="current-price">$ 49.990</p>
+            <p class="transfer-highlight">💸 $ 32.490 por Transferencia CBU</p>
+          </div>
+          <footer>
+            <button type="button" class="btn-buy">Agregar al carrito</button>
+          </footer>
+        </article>
+
+        <!-- Product Card 2 -->
+        <article class="product-card">
+          <img
+            src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='22' font-weight='bold' fill='%23334155'%3EDunk Low Panda%3C/text%3E%3C/svg%3E"
+            alt="Zapatillas Nike Dunk Low Panda"
+          />
+          <header>
+            <span class="badge-2x1">🔥 2x1 + 50% OFF</span>
+            <h2>Zapatillas Urban Dunk Low Black &amp; White Edición Limitada</h2>
+          </header>
+          <div class="price-stack">
+            <p class="old-price">Antes: $ 159.990</p>
+            <p class="current-price">$ 44.990</p>
+            <p class="transfer-highlight">💸 $ 29.240 por Transferencia CBU</p>
+          </div>
+          <footer>
+            <button type="button" class="btn-buy">Agregar al carrito</button>
+          </footer>
+        </article>
+
+        <!-- Product Card 3 -->
+        <article class="product-card">
+          <img
+            src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='22' font-weight='bold' fill='%23334155'%3ECombo Gamer Pro%3C/text%3E%3C/svg%3E"
+            alt="Auriculares y Smartwatch Pro"
+          />
+          <header>
+            <span class="badge-2x1">🔥 Liquidación Total</span>
+            <h2>Pack Smartwatch Ultra + Auriculares Inalámbricos Pro</h2>
+          </header>
+          <div class="price-stack">
+            <p class="old-price">Antes: $ 129.990</p>
+            <p class="current-price">$ 39.990</p>
+            <p class="transfer-highlight">💸 $ 25.990 por Transferencia CBU</p>
+          </div>
+          <footer>
+            <button type="button" class="btn-buy">Comprar ahora</button>
+          </footer>
+        </article>
+      </section>
+    </main>
+
+    <!-- FOOTER WITH ALL 4 REAL-WORLD SCAM SIGNATURES -->
+    <footer class="site-footer" id="footer">
+      <div class="container footer-grid">
+        <div class="footer-col">
+          <h3>UrbanSneakers Oficial</h3>
+          <p>Importadores directos. Pagos únicamente mediante transferencia bancaria inmediata con 35% de descuento adicional.</p>
+          <!-- Signature #2: Mathematically Invalid Modulo 11 CUIT -->
+          <p><strong>CUIT: 30-71234567-0</strong></p>
+        </div>
+
+        <div class="footer-col">
+          <h3>Seguinos en Redes</h3>
+          <p>Consultá por talle y stock disponible:</p>
+          <!-- Signature #3: Broken Social Links (href="#" and bare homepage without profile) -->
+          <div class="social-links">
+            <a href="#" aria-label="Instagram">📸 Instagram</a>
+            <a href="https://instagram.com/" aria-label="WhatsApp">💬 WhatsApp</a>
+            <a href="#" aria-label="Facebook">👍 Facebook</a>
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <h3>Data Fiscal AFIP / ARCA</h3>
+          <!-- Signature #1: Forged Static Data Fiscal F.960 Seal wrapped in dead href="#" -->
+          <a href="#" class="fake-seal-box" title="Data Fiscal Formulario 960">
+            <img
+              src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='124' viewBox='0 0 96 124'%3E%3Crect width='96' height='124' fill='%23ffffff' stroke='%230f172a' stroke-width='2'/%3E%3Crect x='14' y='24' width='68' height='68' fill='%230f172a'/%3E%3Crect x='22' y='32' width='20' height='20' fill='%23ffffff'/%3E%3Crect x='54' y='32' width='20' height='20' fill='%23ffffff'/%3E%3Crect x='22' y='64' width='20' height='20' fill='%23ffffff'/%3E%3Ctext x='48' y='16' text-anchor='middle' font-family='sans-serif' font-size='9' font-weight='bold' fill='%230f172a'%3EAFIP DATA FISCAL%3C/text%3E%3Ctext x='48' y='110' text-anchor='middle' font-family='sans-serif' font-size='8' font-weight='bold' fill='%23dc2626'%3EF.960 NO OFICIAL%3C/text%3E%3C/svg%3E"
+              alt="Data Fiscal AFIP Formulario 960"
+            />
+          </a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
+

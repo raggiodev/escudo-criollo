@@ -351,7 +351,7 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
                         border: '1px solid rgba(251, 191, 36, 0.35)',
                       }}
                     >
-                      v0.1.1
+                      v0.1.3
                     </span>
                   </div>
                   <p className="text-2xs text-indigo-100/90 m-0 leading-tight">

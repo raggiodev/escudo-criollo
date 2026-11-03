@@ -1,6 +1,6 @@
 {
   "name": "escudo-criollo",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "description": "Escudo Criollo (by Raggiodev) — Protección local en tiempo real contra tiendas online truchas, sellos Data Fiscal ARCA/AFIP falsificados, CUITs inválidos y enlaces con rastreadores.",
   "private": true,
   "type": "module",
