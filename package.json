@@ -1,8 +1,8 @@
 {
   "name": "escudo-criollo",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "author": "Fernando Andres Raggio (Raggiodev) <contact@raggiodev.com>",
-  "description": "Escudo Criollo (by Raggiodev) — Protección local en tiempo real contra tiendas online truchas, sellos Data Fiscal ARCA/AFIP falsificados, CUITs inválidos y enlaces con rastreadores.",
+  "description": "Escudo 100% local contra tiendas online truchas: valida CUIT (Módulo 11), QR Data Fiscal ARCA/AFIP y limpia links.",
   "private": true,
   "type": "module",
   "scripts": {

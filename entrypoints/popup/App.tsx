@@ -5,6 +5,7 @@ import {
   ClipboardPaste,
   Copy,
   ExternalLink,
+  FileText,
   Link2,
   Lock,
   Megaphone,
@@ -147,7 +148,7 @@ function buildFallbackUrlReport(rawTabUrl: string): StoreAuditReport | null {
       trustScore: 100,
       scoreBreakdown: [
         {
-          label: '🎮 Easter Egg encontrado (Guiño del Creador)',
+          label: '🎮 Easter Egg encontrado',
           delta: 90,
           type: 'base',
         },
@@ -245,6 +246,7 @@ export const App: React.FC = () => {
   // Manual Auditor state
   const [manualCuit, setManualCuit] = useState<string>('');
   const [manualUrl, setManualUrl] = useState<string>('');
+  const [manualText, setManualText] = useState<string>('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Settings state
@@ -380,6 +382,33 @@ export const App: React.FC = () => {
     return sanitizeUrl(trimmed);
   }, [manualUrl]);
 
+  const manualTextMetrics = useMemo(() => {
+    const totalChars = manualText.length;
+    const noSpacesChars = manualText.replace(/\s/g, '').length;
+    const trimmed = manualText.trim();
+    const wordsCount = trimmed ? trimmed.split(/\s+/).length : 0;
+    const linesCount = totalChars ? manualText.split(/\r\n|\r|\n/).length : 0;
+    const utf8Bytes = new TextEncoder().encode(manualText).length;
+    const hasInvisibleChars =
+      /[\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF]/.test(manualText);
+    const xPostColor =
+      totalChars <= 240
+        ? '#34D399'
+        : totalChars <= 280
+          ? '#FBBF24'
+          : '#F87171';
+
+    return {
+      totalChars,
+      noSpacesChars,
+      wordsCount,
+      linesCount,
+      utf8Bytes,
+      hasInvisibleChars,
+      xPostColor,
+    };
+  }, [manualText]);
+
   const handlePasteCuit = async () => {
     try {
       const clip = await navigator.clipboard.readText();
@@ -406,6 +435,30 @@ export const App: React.FC = () => {
     } catch {
       setLiveStatus('Pegá manualmente con Ctrl+V.');
     }
+  };
+
+  const handlePasteText = async () => {
+    try {
+      const clip = await navigator.clipboard.readText();
+      if (typeof clip === 'string') {
+        setManualText(clip.slice(0, 50000));
+      }
+    } catch {
+      setLiveStatus('Pegá manualmente con Ctrl+V.');
+    }
+  };
+
+  const handleCleanAndCopyInvisibleChars = async () => {
+    const cleaned = manualText.replace(
+      /[\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF]/g,
+      '',
+    );
+    setManualText(cleaned);
+    await triggerCopyFeedback(
+      'manual-clean-text',
+      cleaned,
+      'Caracteres ocultos eliminados y texto copiado al portapapeles.',
+    );
   };
 
   const tabOrder: TabId[] = ['scanner', 'manual', 'settings'];
@@ -482,7 +535,7 @@ export const App: React.FC = () => {
                     border: '1px solid rgba(251, 191, 36, 0.4)',
                   }}
                 >
-                  v0.1.4
+                  v0.1.5
                 </span>
               </div>
               <p className="text-2xs text-indigo-100/90 m-0 mt-0.5">
@@ -1301,6 +1354,143 @@ export const App: React.FC = () => {
                 </div>
               )}
             </section>
+
+            {/* Card 3: Character & Hidden Control Character Counter */}
+            <section
+              aria-labelledby="heading-char-counter"
+              className="rounded-2xl border border-raggio-border bg-raggio-card p-3.5 space-y-2.5"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <h2
+                  id="heading-char-counter"
+                  className="text-xs font-bold text-white m-0 flex items-center gap-1.5"
+                >
+                  <FileText
+                    className="h-4 w-4 text-raggio-gold"
+                    aria-hidden="true"
+                  />
+                  <span>Contador de Caracteres</span>
+                </h2>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => void handlePasteText()}
+                    className="inline-flex items-center gap-1 rounded-md border border-raggio-border bg-raggio-hover px-2 py-1 text-2xs font-medium text-slate-200 hover:border-raggio-gold hover:text-raggio-gold min-h-[26px]"
+                  >
+                    <ClipboardPaste className="h-3 w-3" aria-hidden="true" />
+                    <span>Pegar</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setManualText('')}
+                    aria-label="Limpiar contador de caracteres"
+                    className="inline-flex items-center gap-1 rounded-md border border-raggio-border bg-raggio-hover px-2 py-1 text-2xs font-medium text-slate-300 hover:text-white min-h-[26px]"
+                  >
+                    <Trash2 className="h-3 w-3" aria-hidden="true" />
+                    <span>Limpiar</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="char-counter-input"
+                  className="block text-2xs text-slate-400 mb-1"
+                >
+                  Pegá o escribí cualquier texto, post o fragmento para auditar su longitud:
+                </label>
+                <textarea
+                  id="char-counter-input"
+                  rows={3}
+                  maxLength={50000}
+                  value={manualText}
+                  onChange={(e) => setManualText(e.target.value.slice(0, 50000))}
+                  placeholder="Escribí o pegá tu texto acá..."
+                  className="w-full rounded-xl border border-raggio-border bg-raggio-canvas px-3 py-2 font-mono text-xs text-white placeholder-slate-500 focus:border-raggio-gold resize-y"
+                />
+              </div>
+
+              {/* 4-Column Real-Time Metrics Grid */}
+              <div className="grid grid-cols-4 gap-1.5">
+                <div className="rounded-xl border border-raggio-border bg-raggio-canvas px-2 py-1.5 text-center">
+                  <div className="font-mono text-xs font-extrabold text-raggio-gold">
+                    {manualTextMetrics.totalChars}
+                  </div>
+                  <div className="text-2xs text-slate-400">Caracteres</div>
+                </div>
+                <div className="rounded-xl border border-raggio-border bg-raggio-canvas px-2 py-1.5 text-center">
+                  <div className="font-mono text-xs font-extrabold text-slate-100">
+                    {manualTextMetrics.noSpacesChars}
+                  </div>
+                  <div className="text-2xs text-slate-400">Sin espacios</div>
+                </div>
+                <div className="rounded-xl border border-raggio-border bg-raggio-canvas px-2 py-1.5 text-center">
+                  <div className="font-mono text-xs font-extrabold text-slate-100">
+                    {manualTextMetrics.wordsCount}
+                  </div>
+                  <div className="text-2xs text-slate-400">Palabras</div>
+                </div>
+                <div className="rounded-xl border border-raggio-border bg-raggio-canvas px-2 py-1.5 text-center">
+                  <div className="font-mono text-xs font-extrabold text-slate-100">
+                    {manualTextMetrics.linesCount}
+                  </div>
+                  <div className="text-2xs text-slate-400">Líneas</div>
+                </div>
+              </div>
+
+              {/* X / Twitter & UTF-8 Byte Size Bar */}
+              <div className="flex items-center justify-between gap-2 rounded-xl border border-raggio-border bg-raggio-canvas px-2.5 py-1.5 font-mono text-2xs">
+                <span style={{ color: manualTextMetrics.xPostColor }}>
+                  Post X / Twitter: {manualTextMetrics.totalChars}/280
+                  {manualTextMetrics.totalChars > 280
+                    ? ` (${280 - manualTextMetrics.totalChars})`
+                    : ''}
+                </span>
+                <span className="text-slate-400">
+                  Peso UTF-8: {manualTextMetrics.utf8Bytes} B
+                </span>
+              </div>
+
+              {/* Hidden Zero-Width / BiDi Character Warning & Sanitizer */}
+              {manualTextMetrics.hasInvisibleChars && (
+                <div
+                  className="rounded-xl border p-2.5 space-y-2"
+                  style={{
+                    backgroundColor: 'rgba(69, 26, 3, 0.45)',
+                    borderColor: '#F59E0B',
+                  }}
+                >
+                  <div className="text-2xs font-semibold text-semaphore-warnText">
+                    ⚠️ Detectados caracteres invisibles/ocultos
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleCleanAndCopyInvisibleChars()}
+                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-2xs font-bold transition-colors min-h-[30px]"
+                    style={{
+                      backgroundColor: '#16122B',
+                      borderColor: 'rgba(251, 191, 36, 0.45)',
+                      color: '#FBBF24',
+                    }}
+                  >
+                    {copiedKey === 'manual-clean-text' ? (
+                      <>
+                        <Check
+                          className="h-3.5 w-3.5 text-semaphore-safeText"
+                          aria-hidden="true"
+                        />
+                        <span>¡Texto Limpio y Copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                        <span>🧹 Limpiar y Copiar</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </section>
           </div>
         )}
 
@@ -1521,7 +1711,7 @@ export const App: React.FC = () => {
       {/* Raggiodev Signature Footer */}
       <footer className="border-t border-raggio-border bg-raggio-card px-3.5 py-2.5 text-center">
         <div className="text-2xs text-slate-300">
-          <span className="font-mono font-semibold">Escudo Criollo v0.1.4</span>{' '}
+          <span className="font-mono font-semibold">Escudo Criollo v0.1.5</span>{' '}
           · Desarrollado por{' '}
           <a
             href={RAGGIODEV_PORTFOLIO_URL}

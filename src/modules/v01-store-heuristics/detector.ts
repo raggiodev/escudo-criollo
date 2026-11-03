@@ -1077,7 +1077,7 @@ export function auditStoreSecurity(
   if (isRaggiodevCreatorHq(parsedUrl) || ecommerce.platform === 'RAGGIODEV_HQ') {
     scoreBreakdown.push(
       {
-        label: '🎮 Easter Egg encontrado (Guiño del Creador)',
+        label: '🎮 Easter Egg encontrado',
         delta: 90,
         type: 'base',
       },

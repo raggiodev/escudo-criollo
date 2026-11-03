@@ -60,7 +60,7 @@ function runTest(name: string, fn: () => void): void {
 }
 
 async function main(): Promise<void> {
-  console.log('\n🛡️  ESCUDO CRIOLLO v0.1.4 (by Raggiodev) — Suite de Verificación Forense\n');
+  console.log('\n🛡️  ESCUDO CRIOLLO v0.1.5 (by Raggiodev) — Suite de Verificación Forense\n');
 
   // =========================================================================
   // 1. ENGINE 1: CUIT MODULO 11 & FORENSIC DATA FISCAL
@@ -463,9 +463,15 @@ async function main(): Promise<void> {
       assert.equal(
         report.scoreBreakdown.some(
           (item: ScoreBreakdownItem) =>
-            item.label === '🎮 Easter Egg encontrado (Guiño del Creador)' && item.delta === 90,
+            item.label === '🎮 Easter Egg encontrado' && item.delta === 90,
         ),
         true,
+      );
+      assert.equal(
+        report.scoreBreakdown.some((item: ScoreBreakdownItem) =>
+          item.label.includes('Guiño del Creador'),
+        ),
+        false,
       );
       assert.equal(
         report.scoreBreakdown.some(
@@ -709,7 +715,66 @@ async function main(): Promise<void> {
     assert.deepEqual(sanitizedSettings.dismissedDomains, ['tiendatrucha.com']);
   });
 
-  console.log(`\n✨ ÉXITO TOTAL: ${passedTests}/${passedTests} aserciones forenses v0.1.4 verificadas con 0 errores.\n`);
+  runTest('Cumple estrictamente los límites de Chrome Web Store en manifest (name <= 45 chars, description <= 132 chars) y versión v0.1.5', () => {
+    const pkgPath = path.resolve(process.cwd(), 'package.json');
+    const wxtPath = path.resolve(process.cwd(), 'wxt.config.ts');
+    const detectorPath = path.resolve(
+      process.cwd(),
+      'src',
+      'modules',
+      'v01-store-heuristics',
+      'detector.ts',
+    );
+    const popupPath = path.resolve(process.cwd(), 'entrypoints', 'popup', 'App.tsx');
+
+    const pkgJson = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')) as {
+      version: string;
+      description: string;
+    };
+    const wxtRaw = fs.readFileSync(wxtPath, 'utf-8');
+    const detectorRaw = fs.readFileSync(detectorPath, 'utf-8');
+    const popupRaw = fs.readFileSync(popupPath, 'utf-8');
+
+    const expectedDesc =
+      'Escudo 100% local contra tiendas online truchas: valida CUIT (Módulo 11), QR Data Fiscal ARCA/AFIP y limpia links.';
+
+    assert.equal(pkgJson.version, '0.1.5');
+    assert.equal(pkgJson.description, expectedDesc);
+    assert.equal(pkgJson.description.length, 114);
+    assert.ok(
+      pkgJson.description.length <= 132,
+      `description excede los 132 caracteres (${pkgJson.description.length})`,
+    );
+
+    const nameMatch = /name:\s*'([^']+)'/.exec(wxtRaw);
+    const versionMatch = /version:\s*'([^']+)'/.exec(wxtRaw);
+    const descMatch = /description:\s*\r?\n?\s*'([^']+)'/.exec(wxtRaw);
+
+    assert.notEqual(nameMatch, null);
+    assert.notEqual(versionMatch, null);
+    assert.notEqual(descMatch, null);
+
+    const manifestName = nameMatch?.[1] ?? '';
+    const manifestVersion = versionMatch?.[1] ?? '';
+    const manifestDescription = descMatch?.[1] ?? '';
+
+    assert.equal(manifestVersion, '0.1.5');
+    assert.ok(
+      manifestName.length > 0 && manifestName.length <= 45,
+      `manifest.name excede 45 caracteres (${manifestName.length})`,
+    );
+    assert.equal(manifestDescription, expectedDesc);
+    assert.ok(
+      manifestDescription.length <= 132,
+      `manifest.description excede 132 caracteres (${manifestDescription.length})`,
+    );
+
+    assert.equal(detectorRaw.includes('(Guiño del Creador)'), false);
+    assert.equal(popupRaw.includes('(Guiño del Creador)'), false);
+    assert.equal(popupRaw.includes('Contador de Caracteres'), true);
+  });
+
+  console.log(`\n✨ ÉXITO TOTAL: ${passedTests}/${passedTests} aserciones forenses v0.1.5 verificadas con 0 errores.\n`);
 }
 
 try {

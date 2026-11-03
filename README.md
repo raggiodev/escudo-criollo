@@ -1,4 +1,4 @@
-# 🛡️ Escudo Criollo `v0.1.4` *(by [Fernando Andres Raggio (Raggiodev)](https://raggiodev.com))*
+# 🛡️ Escudo Criollo `v0.1.5` *(by [Fernando Andres Raggio (Raggiodev)](https://raggiodev.com))*
 
 > **El “[Steamcito](https://steamcito.com.ar/)” de la seguridad y privacidad para tus compras online en Argentina y Latinoamérica.**
 > Extensión **100% local (Zero-Server)** para Google Chrome (Manifest V3) diseñada bajo arquitectura **Zero-Trust AppSec**.
@@ -21,7 +21,7 @@ Así como **[Steamcito](https://steamcito.com.ar/)** revolucionó la transparenc
 
 ---
 
-## ✨ Los 4 Motores Forenses (`v0.1.4`)
+## ✨ Los 4 Motores Forenses (`v0.1.5`)
 
 ### 1. Inspector Forense de Sello Data Fiscal F.960 (`src/modules/v01-cuit-arca/validator.ts`)
 - Verifica si los sellos Data Fiscal exhibidos en tiendas online enlazan realmente a dominios oficiales (`*.afip.gob.ar` / `*.arca.gob.ar`) con parámetros de validación activos.
