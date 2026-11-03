@@ -366,3 +366,5 @@ export function sanitizeUrl(rawUrl: string): SanitizeResult {
     isValidHttpUrl: true,
   };
 }
+
+export const sanitizeTrackingUrl = sanitizeUrl;

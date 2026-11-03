@@ -3,17 +3,27 @@ import { JSDOM } from 'jsdom';
 import {
   extractCUITsFromText,
   formatCUIT,
+  inspectDataFiscal,
   inspectDataFiscalDOM,
   isValidCUIT,
+  normalizeOfficialAfipQrUrl,
   validateCUIT,
 } from '../src/modules/v01-cuit-arca/validator';
-import { sanitizeUrl } from '../src/modules/v01-clean-links/sanitizer';
 import {
+  sanitizeTrackingUrl,
+  sanitizeUrl,
+} from '../src/modules/v01-clean-links/sanitizer';
+import {
+  auditStoreDocument,
   auditStoreSecurity,
   detectEcommerceContext,
+  detectEcommercePlatform,
 } from '../src/modules/v01-store-heuristics/detector';
 import {
+  AuditFinding,
+  CuitValidationResult,
   MAX_FIELD_LENGTH,
+  ScoreBreakdownItem,
   parseSafeHttpUrl,
   safeTruncate,
 } from '../src/types';
@@ -48,14 +58,19 @@ async function main(): Promise<void> {
   // =========================================================================
   console.log('▶ Motor 1: Validación Matemática Módulo 11 (CUIT/CUIL) y Sello F.960 ARCA/AFIP');
 
-  runTest('Valida CUITs reales argentinos (MercadoLibre, ARCA, BNA)', () => {
+  runTest('Valida CUITs reales argentinos y verifica alias exportados', () => {
+    assert.equal(inspectDataFiscal, inspectDataFiscalDOM);
+    assert.equal(sanitizeTrackingUrl, sanitizeUrl);
+    assert.equal(auditStoreDocument, auditStoreSecurity);
+    assert.equal(detectEcommercePlatform, detectEcommerceContext);
+
     assert.equal(isValidCUIT('30-70308853-4'), true);
     assert.equal(isValidCUIT('30703088534'), true);
     assert.equal(isValidCUIT('33-69345023-9'), true);
     assert.equal(isValidCUIT('30-50001091-2'), true);
     assert.equal(formatCUIT('30703088534'), '30-70308853-4');
 
-    const mlResult = validateCUIT('30-70308853-4');
+    const mlResult: CuitValidationResult = validateCUIT('30-70308853-4');
     assert.equal(mlResult.isValid, true);
     assert.equal(mlResult.entityType, 'PERSONA_JURIDICA');
   });
@@ -64,7 +79,7 @@ async function main(): Promise<void> {
     const poisonedInput = 'aaaaa20416s28a0151sssss';
     assert.equal(isValidCUIT(poisonedInput), false);
 
-    const detailed = validateCUIT(poisonedInput);
+    const detailed: CuitValidationResult = validateCUIT(poisonedInput);
     assert.equal(detailed.isValid, false);
     assert.equal(
       detailed.errorReason,
@@ -97,12 +112,16 @@ async function main(): Promise<void> {
       Copia repetida: 30703088534
       CUIT trucho inventado: CUIT: 30-70308853-9
     `;
-    const extracted = extractCUITsFromText(sampleFooter);
+    const extracted: CuitValidationResult[] = extractCUITsFromText(sampleFooter);
     assert.equal(extracted.length, 2);
-    assert.equal(extracted[0]?.formatted, '30-70308853-4');
-    assert.equal(extracted[0]?.isValid, true);
-    assert.equal(extracted[1]?.formatted, '30-70308853-9');
-    assert.equal(extracted[1]?.isValid, false);
+    assert.equal(
+      extracted.some((c: CuitValidationResult) => c.formatted === '30-70308853-4' && c.isValid),
+      true,
+    );
+    assert.equal(
+      extracted.some((c: CuitValidationResult) => c.formatted === '30-70308853-9' && !c.isValid),
+      true,
+    );
 
     // Performance & 150 KB cap verification: CUIT placed at 200 KB must be ignored
     const hugePadding = 'A'.repeat(180_000);
@@ -114,7 +133,7 @@ async function main(): Promise<void> {
     assert.ok(elapsed < 100, `Extracción excedió presupuesto de tiempo (${elapsed}ms)`);
   });
 
-  runTest('Detecta QR Data Fiscal F.960 oficial vs. Sello estático trucho vs. palabra "marca"', () => {
+  runTest('Detecta QR Data Fiscal F.960 oficial, normaliza response.aspx de CompraGamer y detecta sellos truchos', () => {
     // Case A: Verified Official QR
     const officialDoc = createDoc(
       `<footer>
@@ -127,6 +146,24 @@ async function main(): Promise<void> {
     const officialAudit = inspectDataFiscalDOM(officialDoc);
     assert.equal(officialAudit.status, 'VERIFIED_OFFICIAL_QR');
     assert.ok(officialAudit.officialQrUrl?.includes('qr.afip.gob.ar'));
+
+    // Case A2: CompraGamer legacy /clavefiscal/qr/response.aspx?qr=... normalized to public viewer
+    const compraGamerQrHref =
+      'https://serviciosweb.afip.gob.ar/clavefiscal/qr/response.aspx?qr=2yBvcpJW9wS27AwRBCPy9A,,';
+    assert.equal(
+      normalizeOfficialAfipQrUrl(new URL(compraGamerQrHref)),
+      'http://qr.afip.gob.ar/?qr=2yBvcpJW9wS27AwRBCPy9A,,',
+    );
+    const cgDoc = createDoc(
+      `<footer><a href="${compraGamerQrHref}"><img src="/img/datafiscal.jpg" alt="Data Fiscal" /></a></footer>`,
+      'https://compragamer.com/',
+    );
+    const cgAudit = inspectDataFiscalDOM(cgDoc);
+    assert.equal(cgAudit.status, 'VERIFIED_OFFICIAL_QR');
+    assert.equal(
+      cgAudit.officialQrUrl,
+      'http://qr.afip.gob.ar/?qr=2yBvcpJW9wS27AwRBCPy9A,,',
+    );
 
     // Case B1: Static unlinked Data Fiscal image
     const forgedStaticDoc = createDoc(
@@ -272,10 +309,27 @@ async function main(): Promise<void> {
   // =========================================================================
   console.log('\n▶ Motor 2: Heurísticas Anti-Estafas de Tiendas, Registros Oficiales y Desglose');
 
-  runTest('Reconoce retailers oficiales argentinos (CompraGamer, Cetrogar) y globales (Tiendamia, Amazon) como SAFE >= 96/100', () => {
-    const minimalSpaShell = '<!doctype html><html><head><title>Store</title></head><body><div id="app"></div></body></html>';
+  runTest('Reconoce CyberMonday/HotSale (CACE), retailers argentinos y plataformas globales con 100/100 SAFE en HTTPS', () => {
+    const minimalSpaShell =
+      '<!doctype html><html><head><title>Store</title></head><body><div id="app"></div></body></html>';
+
+    for (const eventUrl of [
+      'https://www.cybermonday.com.ar/',
+      'https://www.hotsale.com.ar/',
+      'https://www.cace.org.ar/',
+    ]) {
+      const eventDoc = createDoc(minimalSpaShell, eventUrl);
+      const eventReport = auditStoreSecurity(eventDoc, eventUrl);
+      assert.equal(eventReport.ecommerce.isEcommerce, true);
+      assert.equal(eventReport.ecommerce.isWhitelistedOfficial, true);
+      assert.equal(eventReport.ecommerce.platformLabel, 'Evento Oficial CACE');
+      assert.equal(eventReport.pillHeadline, 'Evento Oficial Verificado');
+      assert.equal(eventReport.riskLevel, 'SAFE');
+      assert.equal(eventReport.trustScore, 100);
+    }
 
     for (const storeUrl of [
+      'https://www.mercadolibre.com.ar/',
       'https://www.compragamer.com/',
       'https://www.cetrogar.com.ar/',
       'https://tiendamia.com.ar/',
@@ -293,9 +347,10 @@ async function main(): Promise<void> {
         'SAFE',
         `${storeUrl} debía calificarse como SAFE, recibió ${report.riskLevel}`,
       );
-      assert.ok(
-        report.trustScore >= 96,
-        `${storeUrl} debía tener trustScore >= 96, recibió ${report.trustScore}`,
+      assert.equal(
+        report.trustScore,
+        100,
+        `${storeUrl} debía tener trustScore === 100 en HTTPS, recibió ${report.trustScore}`,
       );
       assert.ok(
         report.scoreBreakdown.length >= 2,
@@ -338,8 +393,16 @@ async function main(): Promise<void> {
     assert.equal(report.riskLevel, 'SAFE');
     assert.ok(report.trustScore >= 85, `Score esperado >= 85, recibido ${report.trustScore}`);
     assert.equal(report.pillHeadline, 'Tienda Verificada · CUIT OK');
-    assert.ok(report.scoreBreakdown.some((item) => item.type === 'base' && item.delta === 60));
-    assert.ok(report.scoreBreakdown.some((item) => item.type === 'positive' && item.delta === 20));
+    assert.ok(
+      report.scoreBreakdown.some(
+        (item: ScoreBreakdownItem) => item.type === 'base' && item.delta === 60,
+      ),
+    );
+    assert.ok(
+      report.scoreBreakdown.some(
+        (item: ScoreBreakdownItem) => item.type === 'positive' && item.delta === 20,
+      ),
+    );
   });
 
   runTest('Califica WARNING a tienda informal sin CUIT ni Data Fiscal (sin señales truchas)', () => {
@@ -397,7 +460,9 @@ async function main(): Promise<void> {
     assert.ok(report.trustScore <= 15, `Score esperado <= 15, recibido ${report.trustScore}`);
     assert.equal(report.pillHeadline, 'Alerta: Posible Tienda Trucha');
 
-    const findingIds = new Set(report.findings.map((f) => f.id));
+    const findingIds = new Set(
+      report.findings.map((f: AuditFinding) => f.id),
+    );
     assert.ok(findingIds.has('forged-data-fiscal-seal'));
     assert.ok(findingIds.has('invalid-cuit-modulo11'));
     assert.ok(findingIds.has('broken-footer-social-links'));

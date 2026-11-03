@@ -698,7 +698,7 @@ export const App: React.FC = () => {
                         })}
                         <li className="flex items-center justify-between gap-2 border-t border-raggio-border/70 pt-1.5 text-2xs font-bold">
                           <span className="text-slate-100">
-                            Puntaje Final (acotado 0–100)
+                            Puntaje de Confianza Final
                           </span>
                           <span
                             className="font-mono"

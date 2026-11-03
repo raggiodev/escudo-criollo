@@ -33,6 +33,11 @@ export default defineConfig({
     content_security_policy: {
       extension_pages: "script-src 'self'; object-src 'none'; base-uri 'none';",
     },
+    web_accessible_resources: [
+      {
+        resources: ['content-scripts/storefront.css', 'icon/*.png'],
+        matches: ['http://*/*', 'https://*/*'],
+      },
+    ],
   },
 });
-

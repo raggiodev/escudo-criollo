@@ -470,7 +470,7 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
                     );
                   })}
                   <li className="flex items-center justify-between gap-2 border-t border-raggio-border/60 pt-1 text-2xs font-bold">
-                    <span className="text-slate-200">Puntaje Final (0–100)</span>
+                    <span className="text-slate-200">Puntaje de Confianza Final</span>
                     <span
                       className="font-mono"
                       style={{ color: semaphore.dotColor }}

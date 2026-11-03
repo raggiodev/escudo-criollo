@@ -9,6 +9,13 @@
     "noUnusedParameters": true,
     "forceConsistentCasingInFileNames": true,
     "jsx": "react-jsx"
-  }
+  },
+  "include": [
+    ".wxt/wxt.d.ts",
+    "src/**/*",
+    "entrypoints/**/*",
+    "scripts/**/*",
+    "wxt.config.ts"
+  ],
+  "exclude": [".output", "node_modules"]
 }
-

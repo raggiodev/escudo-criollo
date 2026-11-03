@@ -365,6 +365,32 @@ function isSealMentionedInString(value: string): boolean {
 }
 
 /**
+ * Normalizes legacy ARCA/AFIP `/clavefiscal/qr/response.aspx?qr=...` links
+ * (such as CompraGamer's footer link) to the public F.960 viewer `http://qr.afip.gob.ar/?qr=...`
+ * so clicking "QR Oficial Verificado" opens the public Data Fiscal sheet instead of Clave Fiscal login.
+ */
+export function normalizeOfficialAfipQrUrl(url: URL): string {
+  const pathLower = url.pathname.toLowerCase();
+  if (
+    (pathLower.includes('/clavefiscal/qr/response.aspx') ||
+      pathLower.includes('/qr/response.aspx')) &&
+    url.searchParams.has('qr')
+  ) {
+    const rawMatch = /[?&]qr=([^&#]+)/i.exec(url.search);
+    const rawQrToken = rawMatch?.[1]
+      ? rawMatch[1].trim()
+      : (url.searchParams.get('qr') ?? '').trim();
+    if (rawQrToken.length > 0) {
+      return safeTruncate(
+        `http://qr.afip.gob.ar/?qr=${rawQrToken}`,
+        MAX_URL_LENGTH,
+      );
+    }
+  }
+  return safeTruncate(url.href, MAX_URL_LENGTH);
+}
+
+/**
  * Scans inline hydration payloads (<script type="application/ld+json">, <noscript>, inline <script>)
  * up to 150 KB so VTEX, Next.js, and Angular SPAs with lazy-loaded footers are recognized immediately.
  */
@@ -412,7 +438,7 @@ function scanHydrationPayloadsForOfficialQr(doc: Document): string | null {
     const candidate = match[0];
     const parsed = parseSafeHttpUrl(candidate);
     if (parsed && isOfficialArcaQrValidationUrl(parsed)) {
-      return safeTruncate(parsed.href, MAX_URL_LENGTH);
+      return normalizeOfficialAfipQrUrl(parsed);
     }
   }
 
@@ -453,7 +479,7 @@ export function inspectDataFiscalDOM(
     if (parsed && isOfficialArcaQrValidationUrl(parsed)) {
       verifiedAnchors.add(node);
       if (!firstOfficialQrUrl) {
-        firstOfficialQrUrl = safeTruncate(parsed.href, MAX_URL_LENGTH);
+        firstOfficialQrUrl = normalizeOfficialAfipQrUrl(parsed);
       }
     }
   }
@@ -591,3 +617,5 @@ export function inspectDataFiscalDOM(
     summary: 'No se encontró código QR F.960 Data Fiscal de ARCA/AFIP en esta página.',
   };
 }
+
+export const inspectDataFiscal = inspectDataFiscalDOM;

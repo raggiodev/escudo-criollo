@@ -1,8 +1,6 @@
-import './style.css';
-import React from 'react';
-import ReactDOM from 'react-dom/client';
+import './xml-svg-guard';
 import { browser } from 'wxt/browser';
-import { ContentScriptContext, createShadowRootUi } from 'wxt/client';
+import { ContentScriptContext } from 'wxt/client';
 import { defineContentScript } from 'wxt/sandbox';
 import { sanitizeUrl } from '../../src/modules/v01-clean-links/sanitizer';
 import { auditStoreSecurity } from '../../src/modules/v01-store-heuristics/detector';
@@ -22,17 +20,31 @@ import {
   subscribeToSettings,
   validateExtensionMessage,
 } from '../../src/utils/storage';
-import { ShieldOverlay } from './ShieldOverlay';
+import type { ShieldController } from './mount-ui';
 
 const SPA_HYDRATION_CHECKPOINTS_MS = [600, 1600, 3200] as const;
 
 export default defineContentScript({
+  allFrames: false,
   matches: ['http://*/*', 'https://*/*'],
+  excludeMatches: [
+    '*://camo.githubusercontent.com/*',
+    '*://*/*.svg',
+    '*://*/*.xml',
+    '*://*/*.pdf',
+    '*://*/*.json',
+  ],
   runAt: 'document_idle',
-  cssInjectionMode: 'ui',
+  cssInjectionMode: 'manual',
 
   async main(ctx: ContentScriptContext) {
-    if (!document.body) {
+    if (
+      window.self !== window.top ||
+      typeof document === 'undefined' ||
+      document.contentType !== 'text/html' ||
+      !document.body ||
+      !document.createElement('div').style
+    ) {
       return;
     }
 
@@ -47,13 +59,11 @@ export default defineContentScript({
       document,
       window.location.href,
     );
-    let activeToast: ToastNotificationPayload | null = null;
+    let currentToast: ToastNotificationPayload | null = null;
     let toastTimer: number | null = null;
     let hydrationTimers: number[] = [];
-    let reactRoot: ReactDOM.Root | null = null;
-    let activeShadowHost: HTMLElement | null = null;
-    let remountCount = 0;
-    const MAX_ANTI_TAMPER_REMOUNTS = 1;
+    let shieldController: ShieldController | null = null;
+    let controllerLoadPromise: Promise<ShieldController> | null = null;
 
     const clearHydrationTimers = () => {
       for (const timerId of hydrationTimers) {
@@ -73,29 +83,75 @@ export default defineContentScript({
       }
     };
 
-    const renderUi = () => {
-      if (!reactRoot) {
+    const computeShouldShowUi = (): boolean => {
+      const isDismissedOnDomain = currentSettings.dismissedDomains.includes(
+        currentReport.hostname.toLowerCase(),
+      );
+      const shouldShowBadge =
+        currentSettings.showFloatingBadge &&
+        !isDismissedOnDomain &&
+        (currentReport.ecommerce.isEcommerce || currentSettings.alwaysShowBadge);
+
+      return (
+        (currentReport.ecommerce.isEcommerce ||
+          currentSettings.alwaysShowBadge ||
+          currentToast !== null) &&
+        (currentSettings.showFloatingBadge || currentToast !== null) &&
+        (shouldShowBadge || currentToast !== null)
+      );
+    };
+
+    const ensureUiMounted = async (): Promise<ShieldController | null> => {
+      if (ctx.isInvalid) {
+        return null;
+      }
+      if (shieldController) {
+        return shieldController;
+      }
+      if (!controllerLoadPromise) {
+        controllerLoadPromise = import('./mount-ui').then(
+          ({ createShieldController }) => {
+            const ctrl = createShieldController({
+              ctx,
+              onDismissToast: () => {
+                currentToast = null;
+                void syncUi();
+              },
+              onHideOnSite: (hostname: string) => {
+                void (async () => {
+                  currentSettings = await dismissDomainForSite(hostname);
+                  await syncUi();
+                })();
+              },
+            });
+            shieldController = ctrl;
+            return ctrl;
+          },
+        );
+      }
+      return controllerLoadPromise;
+    };
+
+    const syncUi = async (): Promise<void> => {
+      if (ctx.isInvalid) {
         return;
       }
-      reactRoot.render(
-        <React.StrictMode>
-          <ShieldOverlay
-            report={currentReport}
-            settings={currentSettings}
-            toast={activeToast}
-            onDismissToast={() => {
-              activeToast = null;
-              renderUi();
-            }}
-            onHideOnSite={(hostname) => {
-              void (async () => {
-                currentSettings = await dismissDomainForSite(hostname);
-                renderUi();
-              })();
-            }}
-          />
-        </React.StrictMode>,
-      );
+      const shouldShowUi = computeShouldShowUi();
+
+      // Lazy on-demand mounting: never create Shadow DOM or boot React on non-ecommerce sites unless needed
+      if (!shouldShowUi && !shieldController) {
+        return;
+      }
+
+      const ctrl = await ensureUiMounted();
+      if (!ctrl) {
+        return;
+      }
+      await ctrl.update({
+        report: currentReport,
+        settings: currentSettings,
+        toast: currentToast,
+      });
     };
 
     /**
@@ -119,7 +175,6 @@ export default defineContentScript({
             if (ctx.isInvalid) {
               return;
             }
-            // Only re-audit if F.960 QR or CUIT hasn't been picked up yet
             const needsHydrationCheck =
               currentReport.dataFiscal.status === 'MISSING_DATA_FISCAL' ||
               (!currentReport.ecommerce.isWhitelistedOfficial &&
@@ -140,7 +195,7 @@ export default defineContentScript({
 
             if (hasChanged) {
               currentReport = refreshed;
-              renderUi();
+              void syncUi();
               void reportToBackground(currentReport);
             }
           });
@@ -150,75 +205,26 @@ export default defineContentScript({
     };
 
     const showToast = (payload: ToastNotificationPayload) => {
-      activeToast = payload;
+      currentToast = payload;
       if (toastTimer !== null) {
         window.clearTimeout(toastTimer);
       }
-      renderUi();
+      void syncUi();
       toastTimer = window.setTimeout(() => {
-        activeToast = null;
-        renderUi();
+        currentToast = null;
+        void syncUi();
       }, 4500);
     };
 
-    const mountClosedShadowUi = async () => {
-      const ui = await createShadowRootUi(ctx, {
-        name: 'escudo-criollo-shield',
-        position: 'overlay',
-        zIndex: 2147483640,
-        mode: 'closed',
-        isolateEvents: true,
-        onMount: (uiContainer, _shadow, shadowHost) => {
-          activeShadowHost = shadowHost;
-          const root = ReactDOM.createRoot(uiContainer);
-          reactRoot = root;
-          renderUi();
-          return root;
-        },
-        onRemove: (mountedRoot) => {
-          mountedRoot?.unmount();
-          if (reactRoot === mountedRoot) {
-            reactRoot = null;
-          }
-        },
-      });
-      ui.mount();
-      return ui;
-    };
-
-    await mountClosedShadowUi();
+    // Initial evaluation: only mounts Shadow DOM if shouldShowUi is true
+    await syncUi();
     void reportToBackground(currentReport);
     scheduleHydrationGraceScans();
-
-    // Anti-Tampering MutationObserver: re-mounts once safely if a hostile page script deletes the host element
-    const antiTamperObserver = new MutationObserver(() => {
-      if (ctx.isInvalid) {
-        antiTamperObserver.disconnect();
-        return;
-      }
-      if (
-        activeShadowHost &&
-        !document.body.contains(activeShadowHost) &&
-        remountCount < MAX_ANTI_TAMPER_REMOUNTS
-      ) {
-        remountCount += 1;
-        activeShadowHost = null;
-        window.requestAnimationFrame(() => {
-          if (!ctx.isInvalid && document.body) {
-            void mountClosedShadowUi();
-          }
-        });
-      }
-    });
-
-    antiTamperObserver.observe(document.body, {
-      childList: true,
-    });
 
     // Subscribe to live settings changes from the Popup
     const unsubscribeSettings = subscribeToSettings((updated) => {
       currentSettings = updated;
-      renderUi();
+      void syncUi();
     });
 
     // Auto-clean trackers on copy when enabled in settings
@@ -271,7 +277,7 @@ export default defineContentScript({
             return;
           }
           currentReport = auditStoreSecurity(document, window.location.href);
-          renderUi();
+          void syncUi();
           void reportToBackground(currentReport);
           scheduleHydrationGraceScans();
         });
@@ -310,7 +316,7 @@ export default defineContentScript({
 
       if (validated.type === 'GET_TAB_AUDIT') {
         currentReport = auditStoreSecurity(document, window.location.href);
-        renderUi();
+        void syncUi();
         void reportToBackground(currentReport);
         sendResponse({
           ok: true,
@@ -337,7 +343,8 @@ export default defineContentScript({
     browser.runtime.onMessage.addListener(onRuntimeMessage);
 
     ctx.onInvalidated(() => {
-      antiTamperObserver.disconnect();
+      shieldController?.destroy();
+      shieldController = null;
       unsubscribeSettings();
       clearHydrationTimers();
       document.removeEventListener('copy', onDocumentCopy);

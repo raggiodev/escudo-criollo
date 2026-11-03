@@ -22,12 +22,22 @@ import {
   inspectDataFiscalDOM,
 } from '../v01-cuit-arca/validator';
 
-// Verified National Argentine Retailers, Marketplaces & Telco Stores (isEcommerce: true, 98-100/100 SAFE)
+// Official CACE Shopping Events & Chamber Portals (isEcommerce: true, 100/100 SAFE)
+const VERIFIED_CACE_EVENT_DOMAINS = [
+  'cybermonday.com.ar',
+  'hotsale.com.ar',
+  'cace.org.ar',
+] as const;
+
+// Verified National Argentine Retailers, Marketplaces & Telco Stores (isEcommerce: true, 100/100 SAFE)
 const VERIFIED_ARGENTINE_ECOMMERCE_DOMAINS = [
   'mercadolibre.com.ar',
   'mercadolibre.com',
   'mercadopago.com.ar',
   'mercadoshops.com.ar',
+  'cybermonday.com.ar',
+  'hotsale.com.ar',
+  'cace.org.ar',
   'compragamer.com',
   'cetrogar.com.ar',
   'fravega.com',
@@ -188,6 +198,15 @@ const SOCIAL_DOMAINS = [
 
 function matchesDomainOrSubdomain(hostname: string, target: string): boolean {
   return hostname === target || hostname.endsWith(`.${target}`);
+}
+
+function isVerifiedCaceEventHost(hostname: string): boolean {
+  if (!hostname) {
+    return false;
+  }
+  return VERIFIED_CACE_EVENT_DOMAINS.some((domain) =>
+    matchesDomainOrSubdomain(hostname, domain),
+  );
 }
 
 function isVerifiedArgentineStoreHost(hostname: string): boolean {
@@ -403,7 +422,20 @@ export function detectEcommerceContext(
     };
   }
 
-  // 2. Verified National Argentine Retailers (CompraGamer, Cetrogar, Frávega, Supermercados, etc.)
+  // 2. Official CACE Event Portals (CyberMonday, Hot Sale, CACE)
+  if (isVerifiedCaceEventHost(hostname)) {
+    return {
+      isEcommerce: true,
+      isWhitelistedOfficial: true,
+      platform: 'COMERCIO_OFICIAL_AR',
+      platformLabel: 'Evento Oficial CACE',
+      isFreeSubdomain: false,
+      hasArsPricing: true,
+      hasCartControls: true,
+    };
+  }
+
+  // 3. Verified National Argentine Retailers (CompraGamer, Cetrogar, Frávega, Supermercados, etc.)
   if (isVerifiedArgentineStoreHost(hostname)) {
     return {
       isEcommerce: true,
@@ -750,12 +782,12 @@ export function auditStoreSecurity(
   const scoreBreakdown: ScoreBreakdownItem[] = [];
 
   // =========================================================================
-  // BRANCH A: VERIFIED INTERNATIONAL & CROSS-BORDER COURIER PLATFORMS (96/100)
+  // BRANCH A: VERIFIED INTERNATIONAL & CROSS-BORDER COURIER PLATFORMS (100/100)
   // =========================================================================
   if (ecommerce.platform === 'ECOMMERCE_INTERNACIONAL') {
     scoreBreakdown.push({
       label: 'Base Plataforma Internacional Reconocida',
-      delta: 86,
+      delta: 90,
       type: 'base',
     });
     if (isHttps) {
@@ -802,9 +834,13 @@ export function auditStoreSecurity(
   }
 
   // =========================================================================
-  // BRANCH B: VERIFIED NATIONAL ARGENTINE RETAILERS & MARKETPLACES (98-100/100)
+  // BRANCH B: VERIFIED NATIONAL ARGENTINE RETAILERS, CACE EVENTS & MARKETPLACES (100/100)
   // =========================================================================
   if (ecommerce.isWhitelistedOfficial && ecommerce.isEcommerce) {
+    const hasLiveFiscalInDom =
+      dataFiscal.status === 'VERIFIED_OFFICIAL_QR' || validCuits.length > 0;
+    const isCaceEvent = ecommerce.platformLabel === 'Evento Oficial CACE';
+
     scoreBreakdown.push({
       label: 'Base Comercio Oficial Reconocido',
       delta: 80,
@@ -823,31 +859,37 @@ export function auditStoreSecurity(
         type: 'negative',
       });
     }
-    scoreBreakdown.push({
-      label: 'Dominio oficial verificado',
-      delta: 8,
-      type: 'positive',
-    });
 
-    findings.push({
-      id: 'whitelisted-official-argentine-store',
-      severity: 'SAFE',
-      title: 'Comercio oficial argentino verificado',
-      detail:
-        'Estás comprando en el dominio auténtico de una cadena, marketplace o comercio oficial reconocido en Argentina.',
-      evidence: hostname,
-    });
-
-    if (
-      dataFiscal.status === 'VERIFIED_OFFICIAL_QR' ||
-      validCuits.length > 0
-    ) {
+    if (hasLiveFiscalInDom) {
+      scoreBreakdown.push({
+        label: 'Dominio oficial verificado',
+        delta: 8,
+        type: 'positive',
+      });
       scoreBreakdown.push({
         label: 'Respaldo F.960 Data Fiscal / CUIT en página',
         delta: 2,
         type: 'positive',
       });
+    } else {
+      scoreBreakdown.push({
+        label: 'Dominio oficial verificado',
+        delta: 10,
+        type: 'positive',
+      });
     }
+
+    findings.push({
+      id: 'whitelisted-official-argentine-store',
+      severity: 'SAFE',
+      title: isCaceEvent
+        ? 'Portal oficial de evento CACE verificado'
+        : 'Comercio oficial argentino verificado',
+      detail: isCaceEvent
+        ? 'Estás navegando en el portal oficial organizado por la Cámara Argentina de Comercio Electrónico (CACE).'
+        : 'Estás comprando en el dominio auténtico de una cadena, marketplace o comercio oficial reconocido en Argentina.',
+      evidence: hostname,
+    });
 
     if (validCuits.length > 0) {
       findings.push({
@@ -877,6 +919,14 @@ export function auditStoreSecurity(
     }
 
     const trustScore = clampScoreFromBreakdown(scoreBreakdown);
+    const pillHeadline = !isHttps
+      ? 'Precaución · Sitio sin HTTPS'
+      : isCaceEvent
+        ? 'Evento Oficial Verificado'
+        : validCuits.length > 0
+          ? 'Tienda Verificada · CUIT OK'
+          : 'Tienda Oficial Verificada';
+
     return {
       url: safeUrl,
       hostname,
@@ -887,10 +937,7 @@ export function auditStoreSecurity(
       trustScore,
       scoreBreakdown,
       riskLevel: isHttps ? 'SAFE' : 'WARNING',
-      pillHeadline:
-        validCuits.length > 0
-          ? 'Tienda Verificada · CUIT OK'
-          : 'Tienda Oficial Verificada',
+      pillHeadline,
       cuits,
       dataFiscal,
       findings,
@@ -898,12 +945,12 @@ export function auditStoreSecurity(
   }
 
   // =========================================================================
-  // BRANCH C: VERIFIED GOVERNMENT (.gob.ar) & BANKING PORTALS
+  // BRANCH C: VERIFIED GOVERNMENT (.gob.ar) & BANKING PORTALS (100/100)
   // =========================================================================
   if (ecommerce.isWhitelistedOfficial && !ecommerce.isEcommerce) {
     scoreBreakdown.push({
       label: 'Base Organismo / Entidad Oficial',
-      delta: 88,
+      delta: 90,
       type: 'base',
     });
     if (isHttps) {
@@ -1280,3 +1327,6 @@ export function auditStoreSecurity(
     findings,
   };
 }
+
+export const auditStoreDocument = auditStoreSecurity;
+export const detectEcommercePlatform = detectEcommerceContext;

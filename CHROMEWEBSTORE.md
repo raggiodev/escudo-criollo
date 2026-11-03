@@ -78,7 +78,7 @@ Spanish (Latin America)
 ## Privacy Policy
 
 **Privacy Policy URL** [REQUIRED]
-https://github.com/raggiodev/escudo-criollo/blob/main/PRIVACY.md
+https://raggiodev.github.io/escudo-criollo/privacidad.html
 
 ## Distribution
 
