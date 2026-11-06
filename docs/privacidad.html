@@ -1,426 +1,450 @@
 <!doctype html>
 <html lang="es-AR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Política de Privacidad — Escudo Criollo (by Raggiodev)</title>
-    <meta
-      name="description"
-      content="Política de Privacidad oficial de la extensión Escudo Criollo (by Raggiodev). Procesamiento 100% local (Zero-Server), cero recolección de datos personales y cero telemetría."
-    />
-    <meta name="theme-color" content="#0D0B18" />
-    <style>
-      :root {
-        --bg-canvas: #0d0b18;
-        --bg-card: #16122b;
-        --bg-hover: #1f193d;
-        --border-subtle: #2b2354;
-        --gold-primary: #fbbf24;
-        --gold-light: #fde68a;
-        --gold-border: rgba(251, 191, 36, 0.35);
-        --text-primary: #f8fafc;
-        --text-secondary: #cbd5e1;
-        --text-muted: #94a3b8;
-        --safe-text: #34d399;
-        --safe-bg: rgba(6, 78, 59, 0.65);
-        --safe-border: #10b981;
-        --brand-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #2563eb 100%);
-        --font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      }
 
-      *,
-      *::before,
-      *::after {
-        box-sizing: border-box;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Política de Privacidad — Escudo Criollo (by Raggiodev)</title>
+  <link rel="icon" type="image/png" href="/docs/favicon.png">
+  <meta name="description"
+    content="Política de Privacidad oficial de la extensión Escudo Criollo (by Raggiodev). Procesamiento 100% local (Zero-Server), cero recolección de datos personales y cero telemetría." />
+  <meta name="theme-color" content="#0D0B18" />
+  <style>
+    :root {
+      --bg-canvas: #0d0b18;
+      --bg-card: #16122b;
+      --bg-hover: #1f193d;
+      --border-subtle: #2b2354;
+      --gold-primary: #fbbf24;
+      --gold-light: #fde68a;
+      --gold-border: rgba(251, 191, 36, 0.35);
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --safe-text: #34d399;
+      --safe-bg: rgba(6, 78, 59, 0.65);
+      --safe-border: #10b981;
+      --brand-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #2563eb 100%);
+      --font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
 
-      html {
-        color-scheme: dark;
-      }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
 
-      body {
-        margin: 0;
-        background-color: var(--bg-canvas);
-        color: var(--text-primary);
-        font-family: var(--font-sans);
-        line-height: 1.65;
-        -webkit-font-smoothing: antialiased;
-      }
+    html {
+      color-scheme: dark;
+    }
 
-      a {
-        color: var(--gold-primary);
-        text-decoration: none;
-      }
+    body {
+      margin: 0;
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
 
-      a:hover {
-        color: var(--gold-light);
-        text-decoration: underline;
-      }
+    a {
+      color: var(--gold-primary);
+      text-decoration: none;
+    }
 
-      :where(a:any-link, button, [tabindex="0"]):focus-visible {
-        outline: 2px solid var(--gold-primary);
-        outline-offset: 3px;
-      }
+    a:hover {
+      color: var(--gold-light);
+      text-decoration: underline;
+    }
 
-      .container {
-        width: min(920px, calc(100% - 2rem));
-        margin-inline: auto;
-      }
+    :where(a:any-link, button, [tabindex="0"]):focus-visible {
+      outline: 2px solid var(--gold-primary);
+      outline-offset: 3px;
+    }
 
-      .site-header {
-        border-block-end: 1px solid var(--border-subtle);
-        background-color: rgba(13, 11, 24, 0.9);
-      }
+    .container {
+      width: min(920px, calc(100% - 2rem));
+      margin-inline: auto;
+    }
 
-      .nav-bar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        padding-block: 1rem;
-        flex-wrap: wrap;
-      }
+    .site-header {
+      border-block-end: 1px solid var(--border-subtle);
+      background-color: rgba(13, 11, 24, 0.9);
+    }
 
-      .brand-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.65rem;
-        font-weight: 800;
-        color: #ffffff;
-        font-size: 1.05rem;
-      }
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-block: 1rem;
+      flex-wrap: wrap;
+    }
 
-      .brand-link:hover {
-        text-decoration: none;
-      }
+    .brand-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-weight: 800;
+      color: #ffffff;
+      font-size: 1.05rem;
+    }
 
-      .policy-main {
-        padding-block: 3rem 4rem;
-      }
+    .brand-link:hover {
+      text-decoration: none;
+    }
 
-      .cert-banner {
-        background-color: var(--safe-bg);
-        border: 1px solid var(--safe-border);
-        border-radius: 1rem;
-        padding: 1.15rem 1.35rem;
-        margin-block-end: 2rem;
-        color: #ecfdf5;
-      }
+    .policy-main {
+      padding-block: 3rem 4rem;
+    }
 
-      .cert-banner strong {
-        color: var(--safe-text);
-      }
+    .cert-banner {
+      background-color: var(--safe-bg);
+      border: 1px solid var(--safe-border);
+      border-radius: 1rem;
+      padding: 1.15rem 1.35rem;
+      margin-block-end: 2rem;
+      color: #ecfdf5;
+    }
 
-      .card {
-        background-color: var(--bg-card);
-        border: 1px solid var(--border-subtle);
-        border-radius: 1.1rem;
-        padding: 1.75rem;
-        margin-block-end: 1.5rem;
-      }
+    .cert-banner strong {
+      color: var(--safe-text);
+    }
 
-      h1 {
-        font-size: clamp(1.8rem, 4vw, 2.5rem);
-        font-weight: 900;
-        margin: 0 0 0.5rem;
-        letter-spacing: -0.02em;
-      }
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 1.1rem;
+      padding: 1.75rem;
+      margin-block-end: 1.5rem;
+    }
 
-      h2 {
-        font-size: 1.3rem;
-        font-weight: 800;
-        color: var(--gold-light);
-        margin: 0 0 0.85rem;
-      }
+    h1 {
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      font-weight: 900;
+      margin: 0 0 0.5rem;
+      letter-spacing: -0.02em;
+    }
 
-      p,
-      li {
-        color: var(--text-secondary);
-      }
+    h2 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--gold-light);
+      margin: 0 0 0.85rem;
+    }
 
-      ul {
-        padding-inline-start: 1.25rem;
-      }
+    p,
+    li {
+      color: var(--text-secondary);
+    }
 
-      code {
-        font-family: var(--font-mono);
-        font-size: 0.86em;
-        color: var(--gold-primary);
-        background-color: rgba(13, 11, 24, 0.75);
-        padding: 0.15rem 0.4rem;
-        border-radius: 0.35rem;
-      }
+    ul {
+      padding-inline-start: 1.25rem;
+    }
 
-      /* Responsive Table for Permissions Justification */
-      .table-wrapper {
-        overflow: auto;
-        max-inline-size: 100%;
-        container-type: inline-size;
-        border-radius: 0.9rem;
-        border: 1px solid var(--border-subtle);
-        background-color: #120e24;
-      }
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+      color: var(--gold-primary);
+      background-color: rgba(13, 11, 24, 0.75);
+      padding: 0.15rem 0.4rem;
+      border-radius: 0.35rem;
+    }
 
-      table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-        font-size: 0.9rem;
-        --label-1: "Permiso";
-        --label-2: "Alcance";
-        --label-3: "Justificación Técnica y de Privacidad";
-      }
+    /* Responsive Table for Permissions Justification */
+    .table-wrapper {
+      overflow: auto;
+      max-inline-size: 100%;
+      container-type: inline-size;
+      border-radius: 0.9rem;
+      border: 1px solid var(--border-subtle);
+      background-color: #120e24;
+    }
 
-      caption {
-        text-align: left;
-        padding: 0.9rem 1.1rem;
-        font-weight: 700;
-        color: var(--gold-light);
-        border-block-end: 1px solid var(--border-subtle);
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.9rem;
+      --label-1: "Permiso";
+      --label-2: "Alcance";
+      --label-3: "Justificación Técnica y de Privacidad";
+    }
+
+    caption {
+      text-align: left;
+      padding: 0.9rem 1.1rem;
+      font-weight: 700;
+      color: var(--gold-light);
+      border-block-end: 1px solid var(--border-subtle);
+    }
+
+    thead {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 2;
+      background-color: var(--bg-hover);
+    }
+
+    thead th {
+      text-align: left;
+      padding: 0.8rem 1rem;
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      color: var(--gold-primary);
+      border-block-end: 1px solid var(--border-subtle);
+    }
+
+    tbody th {
+      position: sticky;
+      inset-inline-start: 0;
+      z-index: 1;
+      background-color: #120e24;
+      text-align: left;
+      padding: 0.85rem 1rem;
+      font-family: var(--font-mono);
+      color: var(--text-primary);
+      border-block-end: 1px solid rgba(43, 35, 84, 0.65);
+    }
+
+    tbody td {
+      padding: 0.85rem 1rem;
+      color: var(--text-secondary);
+      border-block-end: 1px solid rgba(43, 35, 84, 0.65);
+    }
+
+    @container (width < 600px) {
+
+      table,
+      thead,
+      tbody,
+      tr,
+      th,
+      td {
+        display: block;
       }
 
       thead {
+        display: none;
+      }
+
+      tbody tr {
+        margin: 0.75rem;
+        border: 1px solid var(--border-subtle);
+        border-radius: 0.75rem;
+        overflow: hidden;
+      }
+
+      tbody th {
         position: sticky;
         inset-block-start: 0;
         z-index: 2;
         background-color: var(--bg-hover);
       }
 
-      thead th {
-        text-align: left;
-        padding: 0.8rem 1rem;
-        font-size: 0.76rem;
-        text-transform: uppercase;
-        color: var(--gold-primary);
-        border-block-end: 1px solid var(--border-subtle);
+      tbody td:nth-child(2)::before {
+        content: var(--label-2) ": ";
+        font-weight: 700;
+        color: var(--gold-light);
       }
 
-      tbody th {
-        position: sticky;
-        inset-inline-start: 0;
-        z-index: 1;
-        background-color: #120e24;
-        text-align: left;
-        padding: 0.85rem 1rem;
-        font-family: var(--font-mono);
-        color: var(--text-primary);
-        border-block-end: 1px solid rgba(43, 35, 84, 0.65);
+      tbody td:nth-child(3)::before {
+        content: var(--label-3) ": ";
+        font-weight: 700;
+        color: var(--gold-light);
       }
+    }
 
-      tbody td {
-        padding: 0.85rem 1rem;
-        color: var(--text-secondary);
-        border-block-end: 1px solid rgba(43, 35, 84, 0.65);
-      }
+    .site-footer {
+      border-block-start: 1px solid var(--border-subtle);
+      padding-block: 2rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+  </style>
+</head>
 
-      @container (width < 600px) {
-        table,
-        thead,
-        tbody,
-        tr,
-        th,
-        td {
-          display: block;
-        }
+<body>
+  <header class="site-header">
+    <div class="container nav-bar">
+      <a href="./index.html" class="brand-link">
+        <span aria-hidden="true">🛡️</span>
+        <span>Escudo Criollo (by Raggiodev)</span>
+      </a>
+      <nav aria-label="Enlaces rápidos">
+        <a href="./index.html">← Volver al Inicio</a>
+      </nav>
+    </div>
+  </header>
 
-        thead {
-          display: none;
-        }
+  <main class="container policy-main">
+    <h1>Política de Privacidad</h1>
+    <p style="margin-top: 0; color: var(--text-muted)">
+      Última actualización: 3 de noviembre de 2026 · Versión aplicable: <code>v0.1.5</code> y posteriores.
+    </p>
 
-        tbody tr {
-          margin: 0.75rem;
-          border: 1px solid var(--border-subtle);
-          border-radius: 0.75rem;
-          overflow: hidden;
-        }
+    <div class="cert-banner" role="region" aria-label="Certificación de Privacidad">
+      <strong>✅ Certificación de Procesamiento 100% Local (Zero-Server Architecture):</strong>
+      Escudo Criollo (by Raggiodev) opera íntegramente dentro de tu navegador web.
+      <strong>No poseemos servidores de backend, no recopilamos datos personales, no registramos tu historial de
+        navegación y no utilizamos analíticas de terceros.</strong>
+    </div>
 
-        tbody th {
-          position: sticky;
-          inset-block-start: 0;
-          z-index: 2;
-          background-color: var(--bg-hover);
-        }
+    <section class="card">
+      <h2>1. Recolección y Uso de Datos</h2>
+      <p>
+        <strong>Escudo Criollo NO recopila, almacena en la nube, transmite, alquila ni vende ningún tipo de dato
+          personal o de navegación.</strong>
+      </p>
+      <ul>
+        <li>
+          <strong>Historial de navegación y compras:</strong> La detección heurística de tiendas online, la lectura del
+          formulario F.960 Data Fiscal y la validación matemática de números de CUIT se ejecutan en memoria local (RAM)
+          dentro de tu propio dispositivo.
+        </li>
+        <li>
+          <strong>Auditor Manual de CUIT y Enlaces:</strong> Los números de CUIT y las direcciones URL que ingresás o
+          pegás en el panel de la extensión se procesan localmente mediante algoritmos deterministas en
+          JavaScript/TypeScript y jamás abandonan tu navegador.
+        </li>
+        <li>
+          <strong>Cero Telemetría:</strong> La extensión no incluye Google Analytics, Sentry, Mixpanel, píxeles de
+          seguimiento ni scripts remotos. La Política de Seguridad de Contenidos (CSP) bloquea explícitamente cualquier
+          origen externo (<code>script-src 'self'; object-src 'none';</code>).
+        </li>
+      </ul>
+    </section>
 
-        tbody td:nth-child(2)::before {
-          content: var(--label-2) ": ";
-          font-weight: 700;
-          color: var(--gold-light);
-        }
-
-        tbody td:nth-child(3)::before {
-          content: var(--label-3) ": ";
-          font-weight: 700;
-          color: var(--gold-light);
-        }
-      }
-
-      .site-footer {
-        border-block-start: 1px solid var(--border-subtle);
-        padding-block: 2rem;
-        font-size: 0.85rem;
-        color: var(--text-muted);
-        text-align: center;
-      }
-    </style>
-  </head>
-  <body>
-    <header class="site-header">
-      <div class="container nav-bar">
-        <a href="./index.html" class="brand-link">
-          <span aria-hidden="true">🛡️</span>
-          <span>Escudo Criollo (by Raggiodev)</span>
-        </a>
-        <nav aria-label="Enlaces rápidos">
-          <a href="./index.html">← Volver al Inicio</a>
-        </nav>
-      </div>
-    </header>
-
-    <main class="container policy-main">
-      <h1>Política de Privacidad</h1>
-      <p style="margin-top: 0; color: var(--text-muted)">
-        Última actualización: 3 de noviembre de 2026 · Versión aplicable: <code>v0.1.5</code> y posteriores.
+    <section class="card">
+      <h2>2. Justificación de Permisos de Chrome (Manifest V3)</h2>
+      <p>
+        Escudo Criollo solicita únicamente el conjunto mínimo indispensable de permisos para funcionar:
       </p>
 
-      <div class="cert-banner" role="region" aria-label="Certificación de Privacidad">
-        <strong>✅ Certificación de Procesamiento 100% Local (Zero-Server Architecture):</strong>
-        Escudo Criollo (by Raggiodev) opera íntegramente dentro de tu navegador web.
-        <strong>No poseemos servidores de backend, no recopilamos datos personales, no registramos tu historial de navegación y no utilizamos analíticas de terceros.</strong>
+      <div tabindex="0" role="region" aria-labelledby="permissions-table-caption" class="table-wrapper">
+        <table>
+          <caption id="permissions-table-caption">
+            Detalle de permisos solicitados por Escudo Criollo en Google Chrome
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Permiso</th>
+              <th scope="col">Alcance</th>
+              <th scope="col">Justificación Técnica y de Privacidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">storage</th>
+              <td>Local en el dispositivo</td>
+              <td>
+                Guarda exclusivamente en <code>chrome.storage.local</code> tus preferencias visuales (posición de la
+                insignia, limpieza automática al copiar y lista de dominios donde elegiste ocultar la insignia), además
+                de una caché efímera local de las últimas pestañas auditadas para abrir el Popup al instante.
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">activeTab</th>
+              <td>Pestaña activa bajo acción del usuario</td>
+              <td>
+                Permite consultar el diagnóstico de seguridad de la pestaña actual cuando hacés clic en el ícono de
+                Escudo Criollo en la barra del navegador o usás el menú contextual.
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">contextMenus</th>
+              <td>Menú de clic derecho</td>
+              <td>
+                Agrega dos herramientas rápidas al hacer clic derecho: <em>“🧹 Escudo Criollo: Copiar enlace limpio (sin
+                  trackers)”</em> sobre enlaces y <em>“🔍 Escudo Criollo: Validar CUIT seleccionado”</em> sobre texto
+                resaltado.
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">content_scripts (http/https)</th>
+              <td>Ejecución local en tiendas</td>
+              <td>
+                Permite identificar de forma pasiva y automática tiendas de comercio electrónico para verificar si los
+                sellos Data Fiscal F.960 y los números de CUIT exhibidos son auténticos antes de que realices un pago o
+                transferencia bancaria.
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
+    </section>
 
-      <section class="card">
-        <h2>1. Recolección y Uso de Datos</h2>
-        <p>
-          <strong>Escudo Criollo NO recopila, almacena en la nube, transmite, alquila ni vende ningún tipo de dato personal o de navegación.</strong>
-        </p>
-        <ul>
-          <li>
-            <strong>Historial de navegación y compras:</strong> La detección heurística de tiendas online, la lectura del formulario F.960 Data Fiscal y la validación matemática de números de CUIT se ejecutan en memoria local (RAM) dentro de tu propio dispositivo.
-          </li>
-          <li>
-            <strong>Auditor Manual de CUIT y Enlaces:</strong> Los números de CUIT y las direcciones URL que ingresás o pegás en el panel de la extensión se procesan localmente mediante algoritmos deterministas en JavaScript/TypeScript y jamás abandonan tu navegador.
-          </li>
-          <li>
-            <strong>Cero Telemetría:</strong> La extensión no incluye Google Analytics, Sentry, Mixpanel, píxeles de seguimiento ni scripts remotos. La Política de Seguridad de Contenidos (CSP) bloquea explícitamente cualquier origen externo (<code>script-src 'self'; object-src 'none';</code>).
-          </li>
-        </ul>
-      </section>
+    <section class="card">
+      <h2>3. Enlaces Externos Voluntarios</h2>
+      <p>
+        La interfaz ofrece botones opcionales que abren páginas externas en una nueva pestaña únicamente cuando vos
+        hacés clic explícitamente en ellos:
+      </p>
+      <ul>
+        <li>
+          <strong>Central de Deudores del BCRA (<code>bcra.gob.ar</code>):</strong> Para que puedas consultar
+          antecedentes crediticios oficiales con el CUIT ya copiado en tu portapapeles.
+        </li>
+        <li>
+          <strong>Validador QR Oficial ARCA/AFIP (<code>qr.afip.gob.ar</code>):</strong> Para visualizar el certificado
+          F.960 oficial del comercio.
+        </li>
+        <li>
+          <strong>Alerta en X (<code>x.com/intent/tweet</code>):</strong> Disponible únicamente cuando una tienda
+          presenta señales críticas de fraude, abriendo el compositor estándar de X para que revises el texto antes de
+          publicar.
+        </li>
+      </ul>
+    </section>
 
-      <section class="card">
-        <h2>2. Justificación de Permisos de Chrome (Manifest V3)</h2>
-        <p>
-          Escudo Criollo solicita únicamente el conjunto mínimo indispensable de permisos para funcionar:
-        </p>
+    <section class="card" lang="en">
+      <h2>4. English Summary (For Chrome Web Store Reviewers)</h2>
+      <p>
+        <strong>Escudo Criollo (by Raggiodev)</strong> is a 100% client-side, zero-server browser extension.
+      </p>
+      <ul>
+        <li><strong>No Data Collection:</strong> We do not collect, store, transmit, or share any personal data,
+          browsing history, CUIT numbers, or URLs.</li>
+        <li><strong>100% Local Execution:</strong> All tax seal inspections (ARCA/AFIP F.960), Modulo 11 CUIT
+          validations, store scam heuristics, and URL tracker stripping run locally inside the user's browser.</li>
+        <li><strong>Chrome Web Store User Data Policy Compliance:</strong> We certify that user data is never sold to
+          third parties, never used for advertising or profiling, and never used for creditworthiness or lending
+          purposes.</li>
+      </ul>
+    </section>
 
-        <div
-          tabindex="0"
-          role="region"
-          aria-labelledby="permissions-table-caption"
-          class="table-wrapper"
-        >
-          <table>
-            <caption id="permissions-table-caption">
-              Detalle de permisos solicitados por Escudo Criollo en Google Chrome
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">Permiso</th>
-                <th scope="col">Alcance</th>
-                <th scope="col">Justificación Técnica y de Privacidad</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th scope="row">storage</th>
-                <td>Local en el dispositivo</td>
-                <td>
-                  Guarda exclusivamente en <code>chrome.storage.local</code> tus preferencias visuales (posición de la insignia, limpieza automática al copiar y lista de dominios donde elegiste ocultar la insignia), además de una caché efímera local de las últimas pestañas auditadas para abrir el Popup al instante.
-                </td>
-              </tr>
-              <tr>
-                <th scope="row">activeTab</th>
-                <td>Pestaña activa bajo acción del usuario</td>
-                <td>
-                  Permite consultar el diagnóstico de seguridad de la pestaña actual cuando hacés clic en el ícono de Escudo Criollo en la barra del navegador o usás el menú contextual.
-                </td>
-              </tr>
-              <tr>
-                <th scope="row">contextMenus</th>
-                <td>Menú de clic derecho</td>
-                <td>
-                  Agrega dos herramientas rápidas al hacer clic derecho: <em>“🧹 Escudo Criollo: Copiar enlace limpio (sin trackers)”</em> sobre enlaces y <em>“🔍 Escudo Criollo: Validar CUIT seleccionado”</em> sobre texto resaltado.
-                </td>
-              </tr>
-              <tr>
-                <th scope="row">content_scripts (http/https)</th>
-                <td>Ejecución local en tiendas</td>
-                <td>
-                  Permite identificar de forma pasiva y automática tiendas de comercio electrónico para verificar si los sellos Data Fiscal F.960 y los números de CUIT exhibidos son auténticos antes de que realices un pago o transferencia bancaria.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+    <section class="card">
+      <h2>5. Contacto y Código Abierto</h2>
+      <p>
+        Podés auditar el código fuente completo de Escudo Criollo o realizar consultas a través de:
+      </p>
+      <ul>
+        <li>
+          <strong>Desarrollador:</strong> Fernando Andres Raggio (Raggiodev) (<a href="https://raggiodev.com"
+            target="_blank" rel="noopener noreferrer">https://raggiodev.com</a>)
+        </li>
+        <li>
+          <strong>Repositorio Oficial:</strong>
+          <a href="https://github.com/raggiodev/escudo-criollo" target="_blank"
+            rel="noopener noreferrer">https://github.com/raggiodev/escudo-criollo</a>
+        </li>
+        <li>
+          <strong>Contacto:</strong> <a href="mailto:contact@raggiodev.com"><code>contact@raggiodev.com</code></a>
+        </li>
+      </ul>
+    </section>
+  </main>
 
-      <section class="card">
-        <h2>3. Enlaces Externos Voluntarios</h2>
-        <p>
-          La interfaz ofrece botones opcionales que abren páginas externas en una nueva pestaña únicamente cuando vos hacés clic explícitamente en ellos:
-        </p>
-        <ul>
-          <li>
-            <strong>Central de Deudores del BCRA (<code>bcra.gob.ar</code>):</strong> Para que puedas consultar antecedentes crediticios oficiales con el CUIT ya copiado en tu portapapeles.
-          </li>
-          <li>
-            <strong>Validador QR Oficial ARCA/AFIP (<code>qr.afip.gob.ar</code>):</strong> Para visualizar el certificado F.960 oficial del comercio.
-          </li>
-          <li>
-            <strong>Alerta en X (<code>x.com/intent/tweet</code>):</strong> Disponible únicamente cuando una tienda presenta señales críticas de fraude, abriendo el compositor estándar de X para que revises el texto antes de publicar.
-          </li>
-        </ul>
-      </section>
+  <footer class="site-footer">
+    <div class="container">
+      🛡️ Escudo Criollo v0.1.5 · Desarrollado por
+      <a href="https://raggiodev.com" target="_blank" rel="noopener noreferrer">Fernando Andres Raggio (Raggiodev)</a> ·
+      Contacto: <a href="mailto:contact@raggiodev.com">contact@raggiodev.com</a> ·
+      <a href="./index.html">Volver a la página principal</a>
+    </div>
+  </footer>
+</body>
 
-      <section class="card" lang="en">
-        <h2>4. English Summary (For Chrome Web Store Reviewers)</h2>
-        <p>
-          <strong>Escudo Criollo (by Raggiodev)</strong> is a 100% client-side, zero-server browser extension.
-        </p>
-        <ul>
-          <li><strong>No Data Collection:</strong> We do not collect, store, transmit, or share any personal data, browsing history, CUIT numbers, or URLs.</li>
-          <li><strong>100% Local Execution:</strong> All tax seal inspections (ARCA/AFIP F.960), Modulo 11 CUIT validations, store scam heuristics, and URL tracker stripping run locally inside the user's browser.</li>
-          <li><strong>Chrome Web Store User Data Policy Compliance:</strong> We certify that user data is never sold to third parties, never used for advertising or profiling, and never used for creditworthiness or lending purposes.</li>
-        </ul>
-      </section>
-
-      <section class="card">
-        <h2>5. Contacto y Código Abierto</h2>
-        <p>
-          Podés auditar el código fuente completo de Escudo Criollo o realizar consultas a través de:
-        </p>
-        <ul>
-          <li>
-            <strong>Desarrollador:</strong> Fernando Andres Raggio (Raggiodev) (<a href="https://raggiodev.com" target="_blank" rel="noopener noreferrer">https://raggiodev.com</a>)
-          </li>
-          <li>
-            <strong>Repositorio Oficial:</strong>
-            <a href="https://github.com/raggiodev/escudo-criollo" target="_blank" rel="noopener noreferrer">https://github.com/raggiodev/escudo-criollo</a>
-          </li>
-          <li>
-            <strong>Contacto:</strong> <a href="mailto:contact@raggiodev.com"><code>contact@raggiodev.com</code></a>
-          </li>
-        </ul>
-      </section>
-    </main>
-
-    <footer class="site-footer">
-      <div class="container">
-        🛡️ Escudo Criollo v0.1.5 · Desarrollado por
-        <a href="https://raggiodev.com" target="_blank" rel="noopener noreferrer">Fernando Andres Raggio (Raggiodev)</a> ·
-        Contacto: <a href="mailto:contact@raggiodev.com">contact@raggiodev.com</a> ·
-        <a href="./index.html">Volver a la página principal</a>
-      </div>
-    </footer>
-  </body>
 </html>
