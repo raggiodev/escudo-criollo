@@ -1,14 +1,20 @@
 {
   "name": "escudo-criollo",
-  "version": "0.1.5",
-  "author": "Fernando Andres Raggio (Raggiodev) <contact@raggiodev.com>",
+  "version": "0.2.0",
+  "author": "Raggiodev (Fernando Andres Raggio) <contact@raggiodev.com>",
+  "homepage": "https://escudo-criollo.raggiodev.com",
   "description": "Escudo 100% local contra tiendas online truchas: valida CUIT (Módulo 11), QR Data Fiscal ARCA/AFIP y limpia links.",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "wxt",
     "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "build:edge": "wxt build -b edge",
     "zip": "wxt zip",
+    "zip:firefox": "wxt zip -b firefox",
+    "zip:edge": "wxt zip -b edge",
+    "zip:all": "node -e \"const {execSync}=require('node:child_process');['zip','zip:edge','zip:firefox'].forEach(s=>execSync('npm run '+s,{stdio:'inherit'}))\"",
     "compile": "tsc --noEmit",
     "icons": "node scripts/generate-icons.mjs",
     "verify": "tsx scripts/verify-core.ts",
@@ -34,4 +40,3 @@
     "wxt": "^0.19.29"
   }
 }
-

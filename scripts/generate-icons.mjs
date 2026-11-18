@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ICON_DIR = path.resolve(__dirname, '..', 'public', 'icon');
+const DOCS_DIR = path.resolve(__dirname, '..', 'docs');
 
 const SIZES = [16, 32, 48, 96, 128];
 
@@ -114,7 +115,6 @@ function insideShield(nx, ny, scale) {
 
   let halfWidth;
   if (y <= -0.06) {
-    // Subtle shoulder rounding at the very top corners
     halfWidth = 0.78;
     if (y < -0.66) {
       const cy = -0.66;
@@ -135,7 +135,7 @@ function insideShield(nx, ny, scale) {
   return Math.abs(x) <= halfWidth;
 }
 
-// Brand palette RGB
+// Brand & Argentine emblem palette RGB
 const GOLD_LIGHT = [253, 230, 138]; // #FDE68A
 const GOLD_MID = [245, 158, 11]; // #F59E0B
 const GOLD_DARK = [217, 119, 6]; // #D97706
@@ -144,6 +144,11 @@ const INDIGO = [79, 70, 229]; // #4F46E5
 const VIOLET = [124, 58, 237]; // #7C3AED
 const BLUE = [37, 99, 235]; // #2563EB
 const CANVAS = [13, 11, 24]; // #0D0B18
+
+const CELESTE = [56, 189, 248]; // #38BDF8
+const WHITE_FLAG = [248, 250, 252]; // #F8FAFC
+const MATE_TOP = [49, 46, 129]; // #312E81
+const MATE_DEEP = [20, 17, 52]; // #141134
 
 function sampleGoldGradient(nx, ny) {
   const diag = clamp01((nx + ny + 1.5) / 3.0);
@@ -159,7 +164,6 @@ function sampleVioletBlueGradient(nx, ny) {
       ? lerpColor(INDIGO, VIOLET, diag / 0.55)
       : lerpColor(VIOLET, BLUE, (diag - 0.55) / 0.45);
 
-  // Subtle heraldic split sheen on left side for tactical depth
   if (nx < 0) {
     return [
       Math.min(255, base[0] + 18),
@@ -170,59 +174,128 @@ function sampleVioletBlueGradient(nx, ny) {
   return base;
 }
 
+/**
+ * Rasterizes the v0.2.0 Emblem:
+ * Outer Gold Rim -> Raggiodev Violet-Blue Shield -> Dark Core with Argentine Flag (Celeste/White/Celeste + Sun of May)
+ * -> Foreground Argentine Mate Gourd + Gold Virola Rim + Angled Golden Bombilla.
+ */
 function sampleSubpixel(nx, ny, size) {
-  // Boost stroke thickness slightly at 16px for crisp toolbar legibility
   const isTiny = size <= 16;
   const goldScale = 0.96;
-  const darkRingScale = isTiny ? 0.79 : 0.83;
-  const coreScale = isTiny ? 0.74 : 0.78;
+  const violetScale = isTiny ? 0.84 : 0.86;
+  const coreScale = isTiny ? 0.72 : 0.75;
 
   const inOuter = insideShield(nx, ny, goldScale);
   if (!inOuter) {
-    // Subtle dark drop shadow right under the shield
     if (insideShield(nx, ny - 0.04, goldScale * 1.01)) {
       return [13, 11, 24, 95];
     }
     return [0, 0, 0, 0];
   }
 
-  // Checkmark geometry inside core shield
-  const checkThickness = isTiny ? 0.135 : 0.108;
-  const d1 = distToSegment(nx, ny, -0.29, 0.03, -0.06, 0.27);
-  const d2 = distToSegment(nx, ny, -0.06, 0.27, 0.34, -0.2);
-  const checkDist = Math.min(d1, d2);
-
-  // Southern Cross / Argentine Sun 4-point spark near crown (for >= 32px)
-  let inStar = false;
-  if (!isTiny) {
-    const sx = Math.abs(nx);
-    const sy = Math.abs(ny - -0.44);
-    inStar = Math.pow(sx / 0.12, 0.65) + Math.pow(sy / 0.12, 0.65) <= 1.0;
-  }
-
-  if (checkDist <= checkThickness || inStar) {
-    const gold = sampleGoldGradient(nx * 1.4, ny * 1.4);
-    // Crisp specular highlight on top of checkmark
-    const highlight = lerpColor(gold, [255, 248, 214], 0.28);
-    return [highlight[0], highlight[1], highlight[2], 255];
-  }
-
+  // 1. FOREGROUND: Argentine Mate Gourd + Virola + Bombilla (inside core shield)
   if (insideShield(nx, ny, coreScale)) {
-    // Drop shadow behind checkmark for high contrast
-    const d1Shadow = distToSegment(nx, ny - 0.045, -0.29, 0.03, -0.06, 0.27);
-    const d2Shadow = distToSegment(nx, ny - 0.045, -0.06, 0.27, 0.34, -0.2);
-    if (Math.min(d1Shadow, d2Shadow) <= checkThickness * 1.08) {
-      return [13, 11, 24, 255];
+    // Mate gourd geometry centered at (0, 0.16)
+    const mateCx = 0.0;
+    const mateCy = 0.17;
+    const mateRx = isTiny ? 0.34 : 0.32;
+    const mateRy = isTiny ? 0.28 : 0.265;
+    const dxMate = (nx - mateCx) / mateRx;
+    const dyMate = (ny - mateCy) / mateRy;
+    const mateDist = Math.hypot(dxMate, dyMate);
+
+    // Virola top opening ellipse at ny = -0.05
+    const virolaCy = -0.05;
+    const virolaRx = isTiny ? 0.27 : 0.255;
+    const virolaRy = isTiny ? 0.08 : 0.072;
+    const virolaDist = Math.hypot(nx / virolaRx, (ny - virolaCy) / virolaRy);
+
+    // Base foot trapezoid at bottom of mate (ny in [0.39, 0.48])
+    const inMateFoot =
+      ny >= 0.38 &&
+      ny <= 0.485 &&
+      Math.abs(nx) <= lerp(0.14, 0.21, (ny - 0.38) / 0.105);
+
+    // Bombillastraw rising from center-right (0.04, -0.02) to top-right (0.35, -0.48)
+    const bombillaThickness = isTiny ? 0.075 : 0.058;
+    const bombillaDist = distToSegment(nx, ny, 0.04, -0.02, 0.34, -0.47);
+    const mouthpieceDist = distToSegment(nx, ny, 0.28, -0.38, 0.36, -0.49);
+
+    // Check Virola metallic rim
+    if (virolaDist <= 1.08) {
+      if (virolaDist >= 0.62) {
+        return [...GOLD_LIGHT, 255];
+      }
+      // Inside mate mouth (yerba/dark interior) unless bombilla passes through
+      if (bombillaDist <= bombillaThickness) {
+        const gold = sampleGoldGradient(nx * 1.5, ny * 1.5);
+        return [...gold, 255];
+      }
+      return [24, 21, 56, 255];
     }
 
-    const core = sampleVioletBlueGradient(nx, ny);
-    return [core[0], core[1], core[2], 255];
-  }
+    // Check Bombilla above the mate rim
+    if (
+      ny < virolaCy + 0.03 &&
+      (bombillaDist <= bombillaThickness ||
+        mouthpieceDist <= bombillaThickness * 1.2)
+    ) {
+      const gold =
+        mouthpieceDist <= bombillaThickness * 1.2
+          ? GOLD_LIGHT
+          : sampleGoldGradient(nx * 1.4, ny * 1.4);
+      return [gold[0], gold[1], gold[2], 255];
+    }
 
-  if (insideShield(nx, ny, darkRingScale)) {
+    // Check Mate calabash body (truncated above virolaCy)
+    if (ny >= virolaCy && mateDist <= 1.0) {
+      const gold = sampleGoldGradient(nx, ny);
+      // Outer golden border of mate gourd
+      if (mateDist >= (isTiny ? 0.8 : 0.84)) {
+        return [gold[0], gold[1], gold[2], 255];
+      }
+      // Decorative horizontal gold band across middle of mate
+      if (Math.abs(ny - 0.17) <= (isTiny ? 0.045 : 0.035)) {
+        return [GOLD_LIGHT[0], GOLD_LIGHT[1], GOLD_LIGHT[2], 255];
+      }
+      // Rich indigo-wood shaded gourd body
+      const shade = clamp01((nx + 0.35) / 0.7);
+      const bodyColor = lerpColor(MATE_TOP, MATE_DEEP, shade);
+      return [bodyColor[0], bodyColor[1], bodyColor[2], 255];
+    }
+
+    if (inMateFoot) {
+      const gold = sampleGoldGradient(nx, ny);
+      return [gold[0], gold[1], gold[2], 255];
+    }
+
+    // 2. BACKGROUND CREST INSIDE CORE: Argentine Flag Bands (upper shield area)
+    if (ny >= -0.62 && ny < -0.41) {
+      return [CELESTE[0], CELESTE[1], CELESTE[2], 255];
+    }
+    if (ny >= -0.41 && ny < -0.22) {
+      // Sun of May at center of white stripe (0, -0.315)
+      const sunDist = Math.hypot(nx, ny - -0.315);
+      if (sunDist <= (isTiny ? 0.11 : 0.095)) {
+        return [GOLD_MID[0], GOLD_MID[1], GOLD_MID[2], 255];
+      }
+      return [WHITE_FLAG[0], WHITE_FLAG[1], WHITE_FLAG[2], 255];
+    }
+    if (ny >= -0.22 && ny < -0.02) {
+      return [CELESTE[0], CELESTE[1], CELESTE[2], 255];
+    }
+
+    // Lower dark core canvas around mate
     return [CANVAS[0], CANVAS[1], CANVAS[2], 255];
   }
 
+  // Violet-Blue heraldic inner shield band
+  if (insideShield(nx, ny, violetScale)) {
+    const violet = sampleVioletBlueGradient(nx, ny);
+    return [violet[0], violet[1], violet[2], 255];
+  }
+
+  // Outer metallic gold shield rim
   const rimGold = sampleGoldGradient(nx, ny);
   return [rimGold[0], rimGold[1], rimGold[2], 255];
 }
@@ -246,7 +319,6 @@ function generateIcon(size) {
           const nx = (px / size) * 2 - 1;
           const [r, g, b, a] = sampleSubpixel(nx, ny, size);
           const alphaNorm = a / 255;
-          // Premultiplied alpha accumulation prevents dark fringes at edges
           rAcc += r * alphaNorm;
           gAcc += g * alphaNorm;
           bAcc += b * alphaNorm;
@@ -277,11 +349,20 @@ function generateIcon(size) {
 }
 
 fs.mkdirSync(ICON_DIR, { recursive: true });
+fs.mkdirSync(DOCS_DIR, { recursive: true });
 
 for (const size of SIZES) {
   const pngBuffer = generateIcon(size);
   const outPath = path.join(ICON_DIR, `${size}.png`);
   fs.writeFileSync(outPath, pngBuffer);
-  console.log(`[Escudo Criollo] Icono generado: public/icon/${size}.png (${size}x${size}px, ${pngBuffer.length} bytes)`);
+  console.log(
+    `[Escudo Criollo v0.2.0] Icono Mate+Bandera generado: public/icon/${size}.png (${size}x${size}px, ${pngBuffer.length} bytes)`,
+  );
+  if (size === 128) {
+    const faviconPath = path.join(DOCS_DIR, 'favicon.png');
+    fs.writeFileSync(faviconPath, pngBuffer);
+    console.log(
+      `[Escudo Criollo v0.2.0] Favicon web actualizado: docs/favicon.png (${pngBuffer.length} bytes)`,
+    );
+  }
 }
-

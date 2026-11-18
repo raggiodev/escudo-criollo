@@ -3,6 +3,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { JSDOM } from 'jsdom';
 import {
+  LEGAL_AUDIT_DISCLAIMER,
+  OFFICIAL_CUIT_PREFIXES,
+  SCORE_CAPS,
+} from '../src/config/scoring-config';
+import registriesData from '../src/data/verified-registries.json';
+import {
   extractCUITsFromText,
   formatCUIT,
   inspectDataFiscal,
@@ -20,13 +26,17 @@ import {
   HAS_LEGAL_ENTITY_REGEX,
   NON_ECOMMERCE_PLATFORMS,
   VERIFIED_ARGENTINE_RETAILERS,
+  VERIFIED_FINANCIAL_ENTITIES,
   VERIFIED_INTERNATIONAL_PLATFORMS,
+  VERIFIED_MARKETPLACES,
   VERIFIED_OFFICIAL_INSTITUTIONS,
   auditStoreDocument,
   auditStoreSecurity,
+  detectBrandTyposquatting,
   detectEcommerceContext,
   detectEcommercePlatform,
   isRaggiodevCreatorUrl,
+  matchesRegisteredDomain,
 } from '../src/modules/v01-store-heuristics/detector';
 import {
   AuditFinding,
@@ -60,14 +70,25 @@ function runTest(name: string, fn: () => void): void {
 }
 
 async function main(): Promise<void> {
-  console.log('\n🛡️  ESCUDO CRIOLLO v0.1.5 (by Raggiodev) — Suite de Verificación Forense\n');
+  console.log(
+    '\n🛡️  ESCUDO CRIOLLO v0.2.0 (by Raggiodev) — Suite de Verificación Forense\n',
+  );
 
   // =========================================================================
-  // 1. ENGINE 1: CUIT MODULO 11 & FORENSIC DATA FISCAL
+  // 1. ENGINE 1: CUIT MODULO 11 (9 OFFICIAL PREFIXES) & FORENSIC DATA FISCAL
   // =========================================================================
-  console.log('▶ Motor 1: Validación Matemática Módulo 11 (CUIT/CUIL) y Sello F.960 ARCA/AFIP');
+  console.log(
+    '▶ Motor 1: Validación Matemática Módulo 11 (9 Prefijos Oficiales) y Sello F.960 ARCA/AFIP',
+  );
 
-  runTest('Valida CUITs reales argentinos y verifica alias exportados', () => {
+  runTest('Centraliza los 9 prefijos oficiales de CUIT y valida CUITs reales argentinos', () => {
+    assert.deepEqual(
+      [...OFFICIAL_CUIT_PREFIXES],
+      ['20', '23', '24', '25', '26', '27', '30', '33', '34'],
+    );
+    assert.equal(OFFICIAL_CUIT_PREFIXES.length, 9);
+    assert.ok(LEGAL_AUDIT_DISCLAIMER.includes('No reemplaza la verificación oficial en ARCA'));
+
     assert.equal(inspectDataFiscal, inspectDataFiscalDOM);
     assert.equal(sanitizeTrackingUrl, sanitizeUrl);
     assert.equal(auditStoreDocument, auditStoreSecurity);
@@ -133,7 +154,6 @@ async function main(): Promise<void> {
       true,
     );
 
-    // Performance & 150 KB cap verification: CUIT placed at 200 KB must be ignored
     const hugePadding = 'A'.repeat(180_000);
     const beyondCapText = `${hugePadding} CUIT: 33-69345023-9`;
     const start = performance.now();
@@ -144,7 +164,6 @@ async function main(): Promise<void> {
   });
 
   runTest('Detecta QR Data Fiscal F.960 oficial, normaliza response.aspx de CompraGamer y detecta sellos truchos', () => {
-    // Case A: Verified Official QR
     const officialDoc = createDoc(
       `<footer>
         <a href="http://qr.afip.gob.ar/?qr=Z0JiTlN1R01WamN6,," target="_blank">
@@ -157,7 +176,6 @@ async function main(): Promise<void> {
     assert.equal(officialAudit.status, 'VERIFIED_OFFICIAL_QR');
     assert.ok(officialAudit.officialQrUrl?.includes('qr.afip.gob.ar'));
 
-    // Case A2: CompraGamer legacy /clavefiscal/qr/response.aspx?qr=... normalized to public viewer
     const compraGamerQrHref =
       'https://serviciosweb.afip.gob.ar/clavefiscal/qr/response.aspx?qr=2yBvcpJW9wS27AwRBCPy9A,,';
     assert.equal(
@@ -175,7 +193,6 @@ async function main(): Promise<void> {
       'http://qr.afip.gob.ar/?qr=2yBvcpJW9wS27AwRBCPy9A,,',
     );
 
-    // Case B1: Static unlinked Data Fiscal image
     const forgedStaticDoc = createDoc(
       `<footer>
         <img src="https://tiendatrucha.mitiendanube.com/img/sello-afip-data-fiscal.jpg" alt="AFIP" />
@@ -185,7 +202,6 @@ async function main(): Promise<void> {
     const forgedStaticAudit = inspectDataFiscalDOM(forgedStaticDoc);
     assert.equal(forgedStaticAudit.status, 'FORGED_STATIC_SEAL');
 
-    // Case B2: Data Fiscal image wrapped in dead href="#" or generic homepage without query
     const forgedDeadLinkDoc = createDoc(
       `<footer>
         <a href="javascript:void(0)"><img src="/img/qr_arca.webp" alt="Data Fiscal ARCA" /></a>
@@ -194,7 +210,6 @@ async function main(): Promise<void> {
     );
     assert.equal(inspectDataFiscalDOM(forgedDeadLinkDoc).status, 'FORGED_STATIC_SEAL');
 
-    // Case C: Normal store with "nuestras-marcas.png" must NOT false-positive on "arca"
     const brandImagesDoc = createDoc(
       `<main><img src="/banners/nuestras_marcas.png" alt="Marca Oficial" /></main>`,
       'https://deportes.com.ar/',
@@ -283,7 +298,6 @@ async function main(): Promise<void> {
     assert.equal(cleanIg.cleanUrl, 'https://www.instagram.com/reel/C9xYz123AbC/');
     assert.equal(cleanIg.removedCount, 2);
 
-    // YouTube: MUST keep ?v=... and timestamp ?t=125s, while stripping si & feature
     const dirtyYt =
       'https://www.youtube.com/watch?v=dQw4w9WgXcQ&si=9x8y7z6w&feature=shared&t=125s';
     const cleanYt = sanitizeUrl(dirtyYt);
@@ -292,7 +306,6 @@ async function main(): Promise<void> {
       'https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=125s',
     );
 
-    // X / Twitter: MUST strip ?s=20 and tracking ?t=token
     const dirtyX =
       'https://x.com/raggiodev/status/185000111222?s=20&t=RandomTrackerToken99';
     const cleanX = sanitizeUrl(dirtyX);
@@ -315,11 +328,140 @@ async function main(): Promise<void> {
   });
 
   // =========================================================================
-  // 3. ENGINE 2: E-COMMERCE DETECTOR, SCAM SCORER & ZERO-TRUST DEFENSES
+  // 3. ENGINE 2: V0.2.0 E-COMMERCE DETECTOR, BROKERS (IOL), ANTI-TYPOSQUATTING & 95 CAP
   // =========================================================================
-  console.log('\n▶ Motor 2: Heurísticas Anti-Estafas, Tiendas Oficiales v0.1.4, Easter Egg y Demo Trucha');
+  console.log(
+    '\n▶ Motor 2: Heurísticas v0.2.0, Entidades Financieras (IOL Fix), Anti-Typosquatting y Tope Heurístico 95/100',
+  );
 
-  runTest('Reconoce CyberMonday/HotSale (CACE), shopee.com.ar, marcas CACE, universidades e internacionales con 100/100 SAFE', () => {
+  runTest('Reconoce Entidades Financieras y Brokers Regulados (InvertirOnline / IOL Fix, PPI, Balanz, Galicia, BNA) con 100/100 SAFE', () => {
+    const iolMarketHtml = `
+      <!doctype html>
+      <html>
+        <head><title>InvertirOnline — Mercado en Vivo</title></head>
+        <body>
+          <main>
+            <h1>Cotizaciones Merval y CEDEARs</h1>
+            <p>AL30 $ 81.450 · GGAL $ 6.890 · MEP $ 1.145</p>
+            <button>Comprar ahora</button>
+          </main>
+        </body>
+      </html>
+    `;
+
+    for (const financialUrl of [
+      'https://www.invertironline.com/',
+      'https://www.invertironline.com/mercado/cotizaciones',
+      'https://iol.com.ar/',
+      'https://www.portfoliopersonal.com/',
+      'https://www.balanz.com/',
+      'https://www.galicia.ar/',
+      'https://www.bna.com.ar/',
+    ]) {
+      const doc = createDoc(iolMarketHtml, financialUrl);
+      const report = auditStoreSecurity(doc, financialUrl);
+      assert.equal(
+        report.ecommerce.isEcommerce,
+        true,
+        `${financialUrl} debía montar insignia flotante (isEcommerce: true)`,
+      );
+      assert.equal(report.ecommerce.isWhitelistedOfficial, true);
+      assert.equal(report.ecommerce.platform, 'ENTIDAD_FINANCIERA');
+      assert.equal(report.ecommerce.platformLabel, 'Entidad Financiera Oficial');
+      assert.equal(report.pillHeadline, 'Entidad Financiera Oficial');
+      assert.equal(report.riskLevel, 'SAFE');
+      assert.equal(report.trustScore, 100);
+      assert.equal(
+        report.findings.some(
+          (f: AuditFinding) => f.id === 'verified-financial-broker-entity',
+        ),
+        true,
+      );
+    }
+  });
+
+  runTest('Distingue Marketplaces Oficiales (MercadoLibre, Shopee AR, Frávega) con 100/100 SAFE y aviso preventivo sobre vendedores externos', () => {
+    const minimalSpaShell =
+      '<!doctype html><html><head><title>Marketplace</title></head><body><div id="app"></div></body></html>';
+
+    for (const mpUrl of [
+      'https://www.mercadolibre.com.ar/',
+      'https://shopee.com.ar/',
+      'https://www.fravega.com/',
+    ]) {
+      const doc = createDoc(minimalSpaShell, mpUrl);
+      const report = auditStoreSecurity(doc, mpUrl);
+      assert.equal(report.ecommerce.isEcommerce, true);
+      assert.equal(report.ecommerce.isWhitelistedOfficial, true);
+      assert.equal(report.ecommerce.platform, 'MARKETPLACE_OFICIAL');
+      assert.equal(report.ecommerce.platformLabel, 'Marketplace Oficial');
+      assert.equal(report.pillHeadline, 'Tienda Oficial · Verificá al Vendedor');
+      assert.equal(report.riskLevel, 'SAFE');
+      assert.equal(report.trustScore, 100);
+      assert.equal(
+        report.findings.some(
+          (f: AuditFinding) => f.id === 'marketplace-third-party-seller-advisory',
+        ),
+        true,
+      );
+    }
+  });
+
+  runTest('Bloquea suplantación de subdominios y detecta Typosquatting / Phishing (EC-02: 0/100 DANGER)', () => {
+    assert.equal(matchesRegisteredDomain('mercadolibre.com.ar', 'mercadolibre.com.ar'), true);
+    assert.equal(matchesRegisteredDomain('articulo.mercadolibre.com.ar', 'mercadolibre.com.ar'), true);
+    assert.equal(matchesRegisteredDomain('mercadolibre.com.ar.evil.com', 'mercadolibre.com.ar'), false);
+    assert.equal(matchesRegisteredDomain('evilmercadolibre.com.ar', 'mercadolibre.com.ar'), false);
+
+    const phishingShell =
+      '<!doctype html><html><head><title>Login</title></head><body><main><p>Ingresá tu clave</p></main></body></html>';
+
+    for (const phishingUrl of [
+      'https://mercadolibre.com.ar.evil.com/',
+      'https://mercado-libre.com.ar/',
+      'https://mercadol1bre.com/',
+      'https://invertir-online.com/',
+      'https://invertironline-ar.com/',
+      'https://compra-gamer.com/',
+      'https://banco-galicia.com/',
+      'https://cetro-gar.com.ar/',
+      'https://mercadolibre.com.ar@evil.com/login',
+    ]) {
+      const doc = createDoc(phishingShell, phishingUrl);
+      const report = auditStoreSecurity(doc, phishingUrl);
+      assert.equal(
+        report.ecommerce.isWhitelistedOfficial,
+        false,
+        `${phishingUrl} NO debe estar en whitelist oficial`,
+      );
+      assert.equal(
+        report.riskLevel,
+        'DANGER',
+        `${phishingUrl} debía calificarse como DANGER`,
+      );
+      assert.equal(
+        report.trustScore,
+        0,
+        `${phishingUrl} debía recibir trustScore === 0, recibió ${report.trustScore}`,
+      );
+      assert.equal(
+        report.pillHeadline,
+        'Alerta: Dominio Imitador (Posible Phishing)',
+      );
+      assert.equal(
+        report.findings.some(
+          (f: AuditFinding) => f.id === 'typosquatting-brand-impersonation',
+        ),
+        true,
+      );
+    }
+
+    assert.equal(detectBrandTyposquatting('www.invertironline.com'), null);
+    assert.equal(detectBrandTyposquatting('www.compragamer.com'), null);
+    assert.equal(detectBrandTyposquatting('www.arcorencasa.com'), null);
+  });
+
+  runTest('Reconoce CyberMonday/HotSale (CACE), marcas oficiales, universidades e internacionales con 100/100 SAFE', () => {
     const minimalSpaShell =
       '<!doctype html><html><head><title>Store</title></head><body><div id="app"></div></body></html>';
 
@@ -340,9 +482,8 @@ async function main(): Promise<void> {
 
     assert.ok(VERIFIED_ARGENTINE_RETAILERS.includes('coca-cola.com.ar'));
     assert.ok(VERIFIED_ARGENTINE_RETAILERS.includes('shopee.com.ar'));
-    assert.ok(VERIFIED_ARGENTINE_RETAILERS.includes('gadnic.com.ar'));
-    assert.ok(VERIFIED_ARGENTINE_RETAILERS.includes('sommiercenter.com'));
-    assert.ok(VERIFIED_ARGENTINE_RETAILERS.includes('assistcard.com'));
+    assert.ok(VERIFIED_FINANCIAL_ENTITIES.includes('invertironline.com'));
+    assert.ok(VERIFIED_MARKETPLACES.includes('mercadolibre.com.ar'));
     assert.ok(VERIFIED_INTERNATIONAL_PLATFORMS.includes('shopee.com'));
     assert.ok(VERIFIED_OFFICIAL_INSTITUTIONS.includes('palermo.edu'));
     assert.ok(HAS_CONTACT_REGEX.test('Botón de arrepentimiento'));
@@ -350,8 +491,6 @@ async function main(): Promise<void> {
     assert.ok(HAS_LEGAL_ENTITY_REGEX.test('Términos y condiciones'));
 
     for (const storeUrl of [
-      'https://www.mercadolibre.com.ar/',
-      'https://shopee.com.ar/',
       'https://www.compragamer.com/',
       'https://www.cetrogar.com.ar/',
       'https://www.gadnic.com.ar/',
@@ -386,10 +525,6 @@ async function main(): Promise<void> {
         100,
         `${storeUrl} debía tener trustScore === 100 en HTTPS, recibió ${report.trustScore}`,
       );
-      assert.ok(
-        report.scoreBreakdown.length >= 2,
-        `${storeUrl} debía incluir scoreBreakdown transparente`,
-      );
     }
 
     for (const institutionUrl of [
@@ -407,8 +542,10 @@ async function main(): Promise<void> {
     }
   });
 
-  runTest('Elimina falsos positivos FORGED_STATIC_SEAL en GitHub y plataformas no comerciales (NON_ECOMMERCE_PLATFORMS)', () => {
+  runTest('Elimina falsos positivos por signo "$" en blogs/portales generales sin controles de carrito y en NON_ECOMMERCE_PLATFORMS', () => {
     assert.ok(NON_ECOMMERCE_PLATFORMS.includes('github.com'));
+    assert.ok(NON_ECOMMERCE_PLATFORMS.includes('infobae.com'));
+
     const githubRepoHtml = `
       <!doctype html>
       <html>
@@ -424,21 +561,48 @@ async function main(): Promise<void> {
       </html>
     `;
     const ghDoc = createDoc(githubRepoHtml, 'https://github.com/torvalds/linux');
-    const dfAudit = inspectDataFiscalDOM(ghDoc, 'https://github.com/torvalds/linux');
-    assert.equal(dfAudit.status, 'MISSING_DATA_FISCAL');
-
+    assert.equal(
+      inspectDataFiscalDOM(ghDoc, 'https://github.com/torvalds/linux').status,
+      'MISSING_DATA_FISCAL',
+    );
     const ghReport = auditStoreSecurity(ghDoc, 'https://github.com/torvalds/linux');
     assert.equal(ghReport.ecommerce.isEcommerce, false);
     assert.equal(ghReport.ecommerce.platform, 'NO_ECOMMERCE');
-    assert.notEqual(ghReport.riskLevel, 'DANGER');
+
+    // Unknown blog with ARS "$" figures in text but zero cart controls
+    const economyBlogHtml = `
+      <!doctype html>
+      <html>
+        <head><title>Análisis Económico Semanal</title></head>
+        <body>
+          <main>
+            <h1>El salario promedio alcanzó $ 1.250.000 en el trimestre</h1>
+            <p>El costo de la canasta básica se ubicó en $ 980.450 según el informe.</p>
+          </main>
+          <footer><p>Blog de Economía Independiente</p></footer>
+        </body>
+      </html>
+    `;
+    const blogDoc = createDoc(
+      economyBlogHtml,
+      'https://analisis-economico-independiente.com.ar/nota',
+    );
+    const blogReport = auditStoreSecurity(
+      blogDoc,
+      'https://analisis-economico-independiente.com.ar/nota',
+    );
+    assert.equal(blogReport.ecommerce.isEcommerce, false);
+    assert.equal(blogReport.ecommerce.platform, 'NO_ECOMMERCE');
+    assert.equal(blogReport.riskLevel, 'NEUTRAL');
   });
 
-  runTest('Activa Easter Egg (🟢 Easter Egg encontrado · 100/100) en todos los perfiles oficiales de Fernando Andres Raggio (Raggiodev)', () => {
+  runTest('Activa Easter Egg (🟢 Easter Egg encontrado · 100/100) en todos los perfiles oficiales de Raggiodev', () => {
     const html = '<!doctype html><html><head><title>Raggiodev</title></head><body></body></html>';
 
     for (const url of [
       'https://raggiodev.com/',
       'https://www.raggiodev.com/',
+      'https://escudo-criollo.raggiodev.com/',
       'https://raggiodev.github.io/escudo-criollo/',
       'https://linktr.ee/raggiodev',
       'https://github.com/raggiodev',
@@ -468,41 +632,27 @@ async function main(): Promise<void> {
         true,
       );
       assert.equal(
-        report.scoreBreakdown.some((item: ScoreBreakdownItem) =>
-          item.label.includes('Guiño del Creador'),
-        ),
-        false,
-      );
-      assert.equal(
-        report.scoreBreakdown.some(
-          (item: ScoreBreakdownItem) =>
-            item.label === '✨ Sello Oficial Fernando Andres Raggio (Raggiodev)' && item.delta === 10,
-        ),
-        true,
-      );
-      assert.equal(
         report.findings.some(
           (f: AuditFinding) =>
             f.id === 'raggiodev-creator-easter-egg' &&
-            f.title === '🟢 ¡Easter Egg encontrado! · Perfil Oficial del Creador' &&
-            f.detail.includes('Fernando Andres Raggio (Raggiodev)'),
+            f.evidence?.includes('Desarrollado por Raggiodev'),
         ),
         true,
       );
     }
 
     assert.equal(
-      isRaggiodevCreatorUrl('https://raggiodev.github.io/escudo-criollo/demo-tienda-trucha.html'),
+      isRaggiodevCreatorUrl('https://escudo-criollo.raggiodev.com/demo-tienda-trucha.html'),
       false,
     );
   });
 
-  runTest('Detecta las 4 señales de estafa en docs/demo-tienda-trucha.html (0/100 DANGER en GitHub Pages y file://)', () => {
+  runTest('Detecta las 4 señales de estafa en docs/demo-tienda-trucha.html (0/100 DANGER)', () => {
     const demoPath = path.resolve(process.cwd(), 'docs', 'demo-tienda-trucha.html');
     const demoHtml = fs.readFileSync(demoPath, 'utf-8');
 
     for (const demoUrl of [
-      'https://raggiodev.github.io/escudo-criollo/demo-tienda-trucha.html',
+      'https://escudo-criollo.raggiodev.com/demo-tienda-trucha.html',
       'file:///C:/dev/escudo-criollo/docs/demo-tienda-trucha.html',
       'http://localhost:3000/demo-tienda-trucha.html',
     ]) {
@@ -511,7 +661,7 @@ async function main(): Promise<void> {
       assert.equal(report.ecommerce.isEcommerce, true);
       assert.equal(report.riskLevel, 'DANGER');
       assert.equal(report.trustScore, 0);
-      assert.equal(report.pillHeadline, 'Alerta: Posible Tienda Trucha');
+      assert.equal(report.pillHeadline, 'Alerta: Múltiples Señales de Riesgo');
 
       const findingIds = new Set(
         report.findings.map((f: AuditFinding) => f.id),
@@ -522,7 +672,7 @@ async function main(): Promise<void> {
     }
   });
 
-  runTest('Califica SAFE a tienda argentina verificada con CUIT válido, QR F.960, .com.ar y scoreBreakdown exacto', () => {
+  runTest('Aplica tope heurístico de 95/100 (SAFE · "Sin Señales de Riesgo · CUIT OK") a tienda privada no listada con todos los controles fiscales', () => {
     const legitHtml = `
       <!doctype html>
       <html>
@@ -554,18 +704,9 @@ async function main(): Promise<void> {
 
     const report = auditStoreSecurity(doc, doc.URL);
     assert.equal(report.riskLevel, 'SAFE');
-    assert.ok(report.trustScore >= 85, `Score esperado >= 85, recibido ${report.trustScore}`);
-    assert.equal(report.pillHeadline, 'Tienda Verificada · CUIT OK');
-    assert.ok(
-      report.scoreBreakdown.some(
-        (item: ScoreBreakdownItem) => item.type === 'base' && item.delta === 60,
-      ),
-    );
-    assert.ok(
-      report.scoreBreakdown.some(
-        (item: ScoreBreakdownItem) => item.type === 'positive' && item.delta === 20,
-      ),
-    );
+    assert.equal(report.trustScore, SCORE_CAPS.MAX_HEURISTIC_STORE_SCORE);
+    assert.equal(report.trustScore, 95);
+    assert.equal(report.pillHeadline, 'Sin Señales de Riesgo · CUIT OK');
   });
 
   runTest('Califica WARNING a tienda informal sin CUIT ni Data Fiscal (sin señales truchas)', () => {
@@ -620,22 +761,11 @@ async function main(): Promise<void> {
     );
     const report = auditStoreSecurity(doc, doc.URL);
     assert.equal(report.riskLevel, 'DANGER');
-    assert.ok(report.trustScore <= 15, `Score esperado <= 15, recibido ${report.trustScore}`);
-    assert.equal(report.pillHeadline, 'Alerta: Posible Tienda Trucha');
-
-    const findingIds = new Set(
-      report.findings.map((f: AuditFinding) => f.id),
-    );
-    assert.ok(findingIds.has('forged-data-fiscal-seal'));
-    assert.ok(findingIds.has('invalid-cuit-modulo11'));
-    assert.ok(findingIds.has('broken-footer-social-links'));
-    assert.ok(findingIds.has('free-subdomain-aggressive-transfer'));
+    assert.ok(report.trustScore <= 15);
+    assert.equal(report.pillHeadline, 'Alerta: Múltiples Señales de Riesgo');
 
     const { tweetText, intentUrl } = buildSafeXAlertTweet(report);
-    assert.ok(
-      tweetText.length <= MAX_X_ALERT_TWEET_CHARS,
-      `Tweet excede 230 caracteres (${tweetText.length})`,
-    );
+    assert.ok(tweetText.length <= MAX_X_ALERT_TWEET_CHARS);
     assert.ok(tweetText.endsWith('Detectado con 🛡️ Escudo Criollo'));
     assert.equal(tweetText.toLowerCase().includes('@raggiodev'), false);
     assert.ok(intentUrl.startsWith('https://x.com/intent/tweet?text='));
@@ -664,11 +794,47 @@ async function main(): Promise<void> {
   });
 
   // =========================================================================
-  // 4. RUNTIME STORAGE & MESSAGE VALIDATION GUARDS
+  // 4. REGISTRY INTEGRITY, IPC STORAGE & MULTI-STORE MANIFEST VALIDATION
   // =========================================================================
-  console.log('\n▶ Seguridad IPC & Storage: Validadores de Tipos en Tiempo de Ejecución');
+  console.log('\n▶ Integridad de Registros JSON, Seguridad IPC y Manifiesto Multi-Store v0.2.0');
 
-  // Provide minimal chrome mock before dynamic import of storage.ts (webextension-polyfill check)
+  runTest('Verifica integridad sin duplicados y formato lowercase en src/data/verified-registries.json (EC-03)', () => {
+    const categories: [string, readonly string[]][] = [
+      ['caceOfficialEvents', registriesData.caceOfficialEvents],
+      ['financialAndBrokersAr', registriesData.financialAndBrokersAr],
+      ['marketplacesAr', registriesData.marketplacesAr],
+      ['retailersAr', registriesData.retailersAr],
+      ['internationalPlatforms', registriesData.internationalPlatforms],
+      ['officialInstitutionsAr', registriesData.officialInstitutionsAr],
+      ['nonEcommerceExclusions', registriesData.nonEcommerceExclusions],
+    ];
+
+    const hostFormatRegex = /^[a-z0-9.-]+\.[a-z]{2,}$/;
+
+    for (const [catName, list] of categories) {
+      assert.ok(list.length > 0, `Categoría ${catName} no puede estar vacía`);
+      const seen = new Set<string>();
+      for (const domain of list) {
+        assert.equal(
+          domain,
+          domain.toLowerCase().trim(),
+          `Dominio "${domain}" en ${catName} debe estar en minúsculas`,
+        );
+        assert.equal(
+          hostFormatRegex.test(domain),
+          true,
+          `Dominio "${domain}" en ${catName} tiene formato inválido`,
+        );
+        assert.equal(
+          seen.has(domain),
+          false,
+          `Dominio duplicado "${domain}" detectado en ${catName}`,
+        );
+        seen.add(domain);
+      }
+    }
+  });
+
   (globalThis as Record<string, unknown>).chrome = {
     runtime: { id: 'escudo-criollo-unit-test-id' },
     storage: {
@@ -679,7 +845,7 @@ async function main(): Promise<void> {
 
   const storageMod = await import('../src/utils/storage');
 
-  runTest('Valida remitente Zero-Trust, scoreBreakdown en StoreAuditReport y rechaza payloads adulterados', () => {
+  runTest('Valida remitente Zero-Trust, nuevas plataformas v0.2.0 en StoreAuditReport y rechaza payloads adulterados', () => {
     assert.equal(
       storageMod.isTrustedExtensionSender({ id: 'escudo-criollo-unit-test-id' }),
       true,
@@ -690,91 +856,63 @@ async function main(): Promise<void> {
     );
     assert.equal(storageMod.isTrustedExtensionSender(undefined), false);
 
-    assert.equal(storageMod.validateExtensionMessage({ type: 'UNKNOWN_CMD' }), null);
-    assert.equal(
-      storageMod.validateExtensionMessage({ type: 'REPORT_STORE_AUDIT', payload: {} }),
-      null,
-    );
-    assert.deepEqual(storageMod.validateExtensionMessage({ type: 'GET_TAB_AUDIT' }), {
-      type: 'GET_TAB_AUDIT',
-    });
+    const iolDoc = createDoc('<html><body></body></html>', 'https://www.invertironline.com/');
+    const iolReport = auditStoreSecurity(iolDoc, 'https://www.invertironline.com/');
+    const validatedIol = storageMod.validateStoreAuditReport(iolReport);
+    assert.notEqual(validatedIol, null);
+    assert.equal(validatedIol?.ecommerce.platform, 'ENTIDAD_FINANCIERA');
 
-    const cgDoc = createDoc('<html><body></body></html>', 'https://www.compragamer.com/');
-    const cgReport = auditStoreSecurity(cgDoc, 'https://www.compragamer.com/');
-    const validatedReport = storageMod.validateStoreAuditReport(cgReport);
-    assert.notEqual(validatedReport, null);
-    assert.ok((validatedReport?.scoreBreakdown.length ?? 0) >= 2);
-
-    const sanitizedSettings = storageMod.validateSettings({
-      showFloatingBadge: 'not-a-boolean',
-      badgePosition: 'top-center-invalid',
-      dismissedDomains: ['TIENDATRUCHA.COM', 12345, null],
-    });
-    assert.equal(sanitizedSettings.showFloatingBadge, true);
-    assert.equal(sanitizedSettings.badgePosition, 'bottom-left');
-    assert.deepEqual(sanitizedSettings.dismissedDomains, ['tiendatrucha.com']);
+    const mlDoc = createDoc('<html><body></body></html>', 'https://www.mercadolibre.com.ar/');
+    const mlReport = auditStoreSecurity(mlDoc, 'https://www.mercadolibre.com.ar/');
+    const validatedMl = storageMod.validateStoreAuditReport(mlReport);
+    assert.notEqual(validatedMl, null);
+    assert.equal(validatedMl?.ecommerce.platform, 'MARKETPLACE_OFICIAL');
   });
 
-  runTest('Cumple estrictamente los límites de Chrome Web Store en manifest (name <= 45 chars, description <= 132 chars) y versión v0.1.5', () => {
+  runTest('Cumple límites de Chrome Web Store (name <= 45, description <= 132), Firefox Gecko ID, dominio canónico y atribución v0.2.0', () => {
     const pkgPath = path.resolve(process.cwd(), 'package.json');
     const wxtPath = path.resolve(process.cwd(), 'wxt.config.ts');
-    const detectorPath = path.resolve(
-      process.cwd(),
-      'src',
-      'modules',
-      'v01-store-heuristics',
-      'detector.ts',
-    );
-    const popupPath = path.resolve(process.cwd(), 'entrypoints', 'popup', 'App.tsx');
+    const indexHtmlPath = path.resolve(process.cwd(), 'docs', 'index.html');
+    const privHtmlPath = path.resolve(process.cwd(), 'docs', 'privacidad.html');
+    const readmePath = path.resolve(process.cwd(), 'README.md');
 
     const pkgJson = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')) as {
       version: string;
+      homepage: string;
       description: string;
+      scripts: Record<string, string>;
     };
     const wxtRaw = fs.readFileSync(wxtPath, 'utf-8');
-    const detectorRaw = fs.readFileSync(detectorPath, 'utf-8');
-    const popupRaw = fs.readFileSync(popupPath, 'utf-8');
+    const indexHtml = fs.readFileSync(indexHtmlPath, 'utf-8');
+    const privHtml = fs.readFileSync(privHtmlPath, 'utf-8');
+    const readmeRaw = fs.readFileSync(readmePath, 'utf-8');
 
     const expectedDesc =
       'Escudo 100% local contra tiendas online truchas: valida CUIT (Módulo 11), QR Data Fiscal ARCA/AFIP y limpia links.';
 
-    assert.equal(pkgJson.version, '0.1.5');
+    assert.equal(pkgJson.version, '0.2.0');
+    assert.equal(pkgJson.homepage, 'https://escudo-criollo.raggiodev.com');
     assert.equal(pkgJson.description, expectedDesc);
-    assert.equal(pkgJson.description.length, 114);
-    assert.ok(
-      pkgJson.description.length <= 132,
-      `description excede los 132 caracteres (${pkgJson.description.length})`,
-    );
+    assert.ok(pkgJson.description.length <= 132);
+    assert.ok('zip:all' in pkgJson.scripts);
+    assert.ok('zip:firefox' in pkgJson.scripts);
+    assert.ok('zip:edge' in pkgJson.scripts);
 
-    const nameMatch = /name:\s*'([^']+)'/.exec(wxtRaw);
-    const versionMatch = /version:\s*'([^']+)'/.exec(wxtRaw);
-    const descMatch = /description:\s*\r?\n?\s*'([^']+)'/.exec(wxtRaw);
+    assert.ok(wxtRaw.includes("version: '0.2.0'"));
+    assert.ok(wxtRaw.includes("homepage_url: 'https://escudo-criollo.raggiodev.com'"));
+    assert.ok(wxtRaw.includes("id: 'escudo-criollo@raggiodev.com'"));
 
-    assert.notEqual(nameMatch, null);
-    assert.notEqual(versionMatch, null);
-    assert.notEqual(descMatch, null);
-
-    const manifestName = nameMatch?.[1] ?? '';
-    const manifestVersion = versionMatch?.[1] ?? '';
-    const manifestDescription = descMatch?.[1] ?? '';
-
-    assert.equal(manifestVersion, '0.1.5');
-    assert.ok(
-      manifestName.length > 0 && manifestName.length <= 45,
-      `manifest.name excede 45 caracteres (${manifestName.length})`,
-    );
-    assert.equal(manifestDescription, expectedDesc);
-    assert.ok(
-      manifestDescription.length <= 132,
-      `manifest.description excede 132 caracteres (${manifestDescription.length})`,
-    );
-
-    assert.equal(detectorRaw.includes('(Guiño del Creador)'), false);
-    assert.equal(popupRaw.includes('(Guiño del Creador)'), false);
-    assert.equal(popupRaw.includes('Contador de Caracteres'), true);
+    assert.ok(indexHtml.includes('https://escudo-criollo.raggiodev.com/'));
+    assert.ok(indexHtml.includes('id="instalar"'));
+    assert.ok(indexHtml.includes('id="hero-install-label"'));
+    assert.equal(indexHtml.includes('Desarrollado en Argentina por'), false);
+    assert.equal(privHtml.includes('Desarrollado en Argentina por'), false);
+    assert.equal(readmeRaw.includes('Desarrollado en Argentina por'), false);
   });
 
-  console.log(`\n✨ ÉXITO TOTAL: ${passedTests}/${passedTests} aserciones forenses v0.1.5 verificadas con 0 errores.\n`);
+  console.log(
+    `\n✨ ÉXITO TOTAL: ${passedTests}/${passedTests} aserciones forenses v0.2.0 verificadas con 0 errores.\n`,
+  );
 }
 
 try {

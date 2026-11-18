@@ -1,17 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AlertTriangle,
   Check,
   ChevronDown,
   ChevronRight,
   Copy,
   ExternalLink,
   Megaphone,
-  ShieldAlert,
-  ShieldCheck,
   Sparkles,
   X,
 } from 'lucide-react';
+import { EscudoCriolloLogo } from '../../src/components/EscudoCriolloLogo';
+import { LEGAL_AUDIT_DISCLAIMER } from '../../src/config/scoring-config';
 import { sanitizeUrl } from '../../src/modules/v01-clean-links/sanitizer';
 import {
   AuditFinding,
@@ -338,10 +337,7 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
                     borderColor: 'rgba(251, 191, 36, 0.55)',
                   }}
                 >
-                  <ShieldCheck
-                    className="w-4 h-4 text-raggio-gold"
-                    aria-hidden="true"
-                  />
+                  <EscudoCriolloLogo size={20} />
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
@@ -356,7 +352,7 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
                         border: '1px solid rgba(251, 191, 36, 0.35)',
                       }}
                     >
-                      v0.1.5
+                      v0.2.0
                     </span>
                   </div>
                   <p className="text-2xs text-indigo-100/90 m-0 leading-tight">
@@ -591,28 +587,43 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
                 )}
 
                 {/* Data Fiscal Status Row */}
-                <div className="flex items-center justify-between gap-2 text-2xs pt-0.5">
-                  <span className="text-slate-400">Formulario F.960 QR:</span>
+                <div className="space-y-1 pt-0.5">
+                  <div className="flex items-center justify-between gap-2 text-2xs">
+                    <span className="text-slate-400">
+                      {report.ecommerce.platform === 'ENTIDAD_FINANCIERA'
+                        ? 'Supervisión:'
+                        : 'Formulario F.960 QR:'}
+                    </span>
+                    {report.ecommerce.platform === 'ENTIDAD_FINANCIERA' ? (
+                      <span className="font-mono font-semibold text-semaphore-safeText">
+                        Entidad regulada por BCRA / CNV
+                      </span>
+                    ) : report.dataFiscal.status === 'VERIFIED_OFFICIAL_QR' &&
+                      report.dataFiscal.officialQrUrl ? (
+                      <a
+                        href={report.dataFiscal.officialQrUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-md border border-semaphore-safeBorder bg-semaphore-safeBg px-2 py-0.5 font-mono text-2xs font-semibold text-semaphore-safeText hover:underline min-h-[24px]"
+                      >
+                        <span>🏛️ Verificar Ficha en ARCA ↗</span>
+                      </a>
+                    ) : report.dataFiscal.status === 'FORGED_STATIC_SEAL' ? (
+                      <span className="font-mono font-bold text-semaphore-dangerText">
+                        🚨 Sello Trucho / Sin Link
+                      </span>
+                    ) : (
+                      <span className="font-mono text-slate-400">
+                        No detectado en vista actual
+                      </span>
+                    )}
+                  </div>
                   {report.dataFiscal.status === 'VERIFIED_OFFICIAL_QR' &&
-                  report.dataFiscal.officialQrUrl ? (
-                    <a
-                      href={report.dataFiscal.officialQrUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 font-mono font-semibold text-semaphore-safeText hover:underline min-h-[24px]"
-                    >
-                      <span>QR Oficial Verificado</span>
-                      <ExternalLink className="w-3 h-3" aria-hidden="true" />
-                    </a>
-                  ) : report.dataFiscal.status === 'FORGED_STATIC_SEAL' ? (
-                    <span className="font-mono font-bold text-semaphore-dangerText">
-                      🚨 Sello Trucho / Sin Link
-                    </span>
-                  ) : (
-                    <span className="font-mono text-slate-400">
-                      No detectado en vista actual
-                    </span>
-                  )}
+                    report.dataFiscal.officialQrUrl && (
+                      <p className="text-2xs text-slate-400 m-0 leading-snug">
+                        Confirmá que la Razón Social en ARCA coincida con esta tienda.
+                      </p>
+                    )}
                 </div>
               </div>
             )}
@@ -664,6 +675,9 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
                   );
                 })}
               </ul>
+              <p className="mt-2 text-2xs text-slate-400 m-0 leading-snug">
+                {LEGAL_AUDIT_DISCLAIMER}
+              </p>
             </div>
 
             {/* Quick Action Bar */}
@@ -755,32 +769,9 @@ export const ShieldOverlay: React.FC<ShieldOverlayProps> = ({
             borderColor: semaphore.pillBorder,
           }}
         >
-          {/* Golden/Violet Shield Emblem */}
-          <span
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-            style={{
-              background:
-                'linear-gradient(135deg, #4F46E5 0%, #7C3AED 55%, #2563EB 100%)',
-              boxShadow: '0 0 10px rgba(245, 158, 11, 0.2)',
-              border: '1px solid rgba(251, 191, 36, 0.5)',
-            }}
-          >
-            {report.riskLevel === 'DANGER' ? (
-              <ShieldAlert
-                className="w-3.5 h-3.5 text-raggio-goldLight"
-                aria-hidden="true"
-              />
-            ) : report.riskLevel === 'WARNING' ? (
-              <AlertTriangle
-                className="w-3.5 h-3.5 text-raggio-goldLight"
-                aria-hidden="true"
-              />
-            ) : (
-              <ShieldCheck
-                className="w-3.5 h-3.5 text-raggio-goldLight"
-                aria-hidden="true"
-              />
-            )}
+          {/* Official Mate + Argentine Flag Shield Emblem */}
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+            <EscudoCriolloLogo size={24} />
           </span>
 
           {/* Status Semaphore Dot */}

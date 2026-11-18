@@ -215,17 +215,38 @@ function validateDataFiscal(raw: unknown): DataFiscalAuditResult | null {
   };
 }
 
+const VALID_PLATFORMS = new Set<EcommerceContext['platform']>([
+  'TIENDANUBE',
+  'SHOPIFY',
+  'WOOCOMMERCE',
+  'MERCADOLIBRE',
+  'MERCADOSHOPS',
+  'MARKETPLACE_OFICIAL',
+  'ENTIDAD_FINANCIERA',
+  'VTEX',
+  'PRESTASHOP',
+  'MAGENTO',
+  'TIENDA_ARGENTINA',
+  'COMERCIO_OFICIAL_AR',
+  'ECOMMERCE_INTERNACIONAL',
+  'SITIO_OFICIAL',
+  'RAGGIODEV_HQ',
+  'NO_ECOMMERCE',
+]);
+
 function validateEcommerceContext(raw: unknown): EcommerceContext | null {
   if (!isPlainRecord(raw) || typeof raw.isEcommerce !== 'boolean') {
     return null;
   }
+  const platform: EcommerceContext['platform'] =
+    typeof raw.platform === 'string' &&
+    VALID_PLATFORMS.has(raw.platform as EcommerceContext['platform'])
+      ? (raw.platform as EcommerceContext['platform'])
+      : 'NO_ECOMMERCE';
   return {
     isEcommerce: raw.isEcommerce,
     isWhitelistedOfficial: Boolean(raw.isWhitelistedOfficial),
-    platform:
-      typeof raw.platform === 'string'
-        ? (raw.platform as EcommerceContext['platform'])
-        : 'NO_ECOMMERCE',
+    platform,
     platformLabel: safeTruncate(raw.platformLabel, 80) || 'Sitio Web',
     isFreeSubdomain: Boolean(raw.isFreeSubdomain),
     hasArsPricing: Boolean(raw.hasArsPricing),

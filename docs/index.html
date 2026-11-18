@@ -1,1003 +1,1617 @@
 <!doctype html>
 <html lang="es-AR">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Escudo Criollo (by Raggiodev) — Defensa Anti-Estafas y Privacidad 100% Local</title>
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <meta name="description"
-    content="El 'Steamcito' de la seguridad para compras online en Argentina y LATAM. Detectá tiendas truchas, sellos Data Fiscal ARCA/AFIP falsos, CUITs inválidos y limpiá links con rastreadores." />
-  <meta name="theme-color" content="#0D0B18" />
-  <style>
-    :root {
-      --bg-canvas: #0d0b18;
-      --bg-card: #16122b;
-      --bg-hover: #1f193d;
-      --border-subtle: #2b2354;
-      --gold-primary: #fbbf24;
-      --gold-light: #fde68a;
-      --gold-border: rgba(251, 191, 36, 0.35);
-      --gold-glow: rgba(245, 158, 11, 0.14);
-      --text-primary: #f8fafc;
-      --text-secondary: #cbd5e1;
-      --text-muted: #94a3b8;
-      --safe-text: #34d399;
-      --safe-bg: rgba(6, 78, 59, 0.65);
-      --safe-border: #10b981;
-      --warn-text: #fbbf24;
-      --warn-bg: rgba(69, 26, 3, 0.65);
-      --warn-border: #f59e0b;
-      --danger-text: #f87171;
-      --danger-bg: rgba(69, 10, 10, 0.75);
-      --danger-border: #ef4444;
-      --brand-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #2563eb 100%);
-      --gold-gradient: linear-gradient(135deg, #fde68a 0%, #f59e0b 50%, #d97706 100%);
-      --font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    }
-
-    *,
-    *::before,
-    *::after {
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-      color-scheme: dark;
-    }
-
-    body {
-      margin: 0;
-      background-color: var(--bg-canvas);
-      background-image:
-        radial-gradient(circle at 15% 10%, rgba(124, 58, 237, 0.18), transparent 38%),
-        radial-gradient(circle at 85% 15%, rgba(37, 99, 235, 0.15), transparent 38%),
-        radial-gradient(circle at 50% 85%, rgba(251, 191, 36, 0.07), transparent 45%);
-      color: var(--text-primary);
-      font-family: var(--font-sans);
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    a {
-      color: var(--gold-primary);
-      text-decoration: none;
-      transition: color 0.15s ease, opacity 0.15s ease;
-    }
-
-    a:hover {
-      color: var(--gold-light);
-      text-decoration: underline;
-    }
-
-    :where(a:any-link, button, summary, [tabindex="0"]):focus-visible {
-      outline: 2px solid var(--gold-primary);
-      outline-offset: 3px;
-    }
-
-    .container {
-      width: min(1120px, calc(100% - 2rem));
-      margin-inline: auto;
-    }
-
-    /* Top Navigation */
-    .site-header {
-      position: sticky;
-      inset-block-start: 0;
-      z-index: 50;
-      backdrop-filter: blur(12px);
-      background-color: rgba(13, 11, 24, 0.86);
-      border-block-end: 1px solid var(--border-subtle);
-    }
-
-    .nav-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      padding-block: 0.9rem;
-      flex-wrap: wrap;
-    }
-
-    .brand-identity {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.75rem;
-      text-decoration: none;
-    }
-
-    .brand-identity:hover {
-      text-decoration: none;
-    }
-
-    .shield-emblem {
-      width: 2.5rem;
-      height: 2.5rem;
-      border-radius: 0.75rem;
-      background: var(--brand-gradient);
-      border: 1px solid var(--gold-border);
-      box-shadow: 0 0 18px var(--gold-glow);
-      display: grid;
-      place-items: center;
-      font-size: 1.25rem;
-    }
-
-    .brand-title {
-      font-weight: 800;
-      font-size: 1.1rem;
-      color: #ffffff;
-      letter-spacing: -0.02em;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .version-pill {
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      padding: 0.12rem 0.45rem;
-      border-radius: 0.375rem;
-      background-color: var(--bg-card);
-      color: var(--gold-primary);
-      border: 1px solid var(--gold-border);
-    }
-
-    .brand-sub {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      display: block;
-    }
-
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 1.25rem;
-      flex-wrap: wrap;
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-
-    .nav-links a {
-      color: var(--text-secondary);
-    }
-
-    .nav-links a:hover {
-      color: var(--gold-primary);
-      text-decoration: none;
-    }
-
-    /* Hero Section */
-    .hero {
-      padding-block: 4.5rem 3.5rem;
-      text-align: center;
-    }
-
-    .eyebrow-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.35rem 0.9rem;
-      border-radius: 9999px;
-      background-color: var(--bg-card);
-      border: 1px solid var(--gold-border);
-      color: var(--gold-light);
-      font-size: 0.82rem;
-      font-weight: 600;
-      margin-block-end: 1.5rem;
-      box-shadow: 0 0 24px var(--gold-glow);
-    }
-
-    .hero h1 {
-      font-size: clamp(2.1rem, 5vw, 3.5rem);
-      font-weight: 900;
-      line-height: 1.12;
-      letter-spacing: -0.03em;
-      margin: 0 auto 1.25rem;
-      max-inline-size: 18ch;
-    }
-
-    .gold-gradient-text {
-      background: var(--gold-gradient);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
-
-    .hero-lead {
-      font-size: clamp(1.02rem, 2vw, 1.2rem);
-      color: var(--text-secondary);
-      max-inline-size: 66ch;
-      margin: 0 auto 2rem;
-    }
-
-    .cta-group {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 1rem;
-      flex-wrap: wrap;
-      margin-block-end: 2.75rem;
-    }
-
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.6rem;
-      padding: 0.85rem 1.6rem;
-      border-radius: 0.85rem;
-      background: var(--brand-gradient);
-      color: #ffffff;
-      font-weight: 700;
-      font-size: 0.96rem;
-      border: 1px solid var(--gold-border);
-      box-shadow: 0 10px 30px -6px rgba(79, 70, 229, 0.55);
-      text-decoration: none;
-    }
-
-    .btn-primary:hover {
-      color: #ffffff;
-      text-decoration: none;
-      filter: brightness(1.08);
-    }
-
-    .btn-secondary {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.85rem 1.4rem;
-      border-radius: 0.85rem;
-      background-color: var(--bg-card);
-      color: var(--gold-primary);
-      font-weight: 700;
-      font-size: 0.95rem;
-      border: 1px solid var(--border-subtle);
-      text-decoration: none;
-    }
-
-    .btn-secondary:hover {
-      background-color: var(--bg-hover);
-      border-color: var(--gold-border);
-      text-decoration: none;
-    }
-
-    /* Steamcito-style Live Pill Preview Showcase */
-    .pill-showcase {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 0.9rem;
-      margin-inline: auto;
-      max-inline-size: 920px;
-    }
-
-    .demo-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.6rem;
-      padding: 0.55rem 1rem;
-      border-radius: 9999px;
-      background-color: #0d0b18;
-      font-size: 0.84rem;
-      font-weight: 700;
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
-    }
-
-    .demo-pill.safe {
-      border: 1px solid var(--safe-border);
-    }
-
-    .demo-pill.warn {
-      border: 1px solid var(--warn-border);
-    }
-
-    .demo-pill.danger {
-      border: 1px solid var(--danger-border);
-    }
-
-    .dot {
-      width: 0.55rem;
-      height: 0.55rem;
-      border-radius: 9999px;
-    }
-
-    .dot.safe {
-      background-color: var(--safe-text);
-      box-shadow: 0 0 8px var(--safe-text);
-    }
-
-    .dot.warn {
-      background-color: var(--warn-text);
-      box-shadow: 0 0 8px var(--warn-text);
-    }
-
-    .dot.danger {
-      background-color: var(--danger-text);
-      box-shadow: 0 0 8px var(--danger-text);
-    }
-
-    .score-chip {
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      padding: 0.1rem 0.5rem;
-      border-radius: 9999px;
-    }
-
-    .score-chip.safe {
-      color: var(--safe-text);
-      background-color: var(--safe-bg);
-      border: 1px solid var(--safe-border);
-    }
-
-    .score-chip.warn {
-      color: var(--warn-text);
-      background-color: var(--warn-bg);
-      border: 1px solid var(--warn-border);
-    }
-
-    .score-chip.danger {
-      color: var(--danger-text);
-      background-color: var(--danger-bg);
-      border: 1px solid var(--danger-border);
-    }
-
-    /* Section Styling */
-    section {
-      padding-block: 3.25rem;
-    }
-
-    .section-header {
-      text-align: center;
-      max-inline-size: 68ch;
-      margin: 0 auto 2.5rem;
-    }
-
-    .section-header h2 {
-      font-size: clamp(1.6rem, 3vw, 2.25rem);
-      font-weight: 800;
-      margin: 0 0 0.65rem;
-      letter-spacing: -0.02em;
-    }
-
-    .section-header p {
-      color: var(--text-secondary);
-      margin: 0;
-    }
-
-    /* 4 Feature Cards Grid */
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1.25rem;
-    }
-
-    .feature-card {
-      background-color: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: 1.15rem;
-      padding: 1.5rem;
-      transition: transform 0.2s ease, border-color 0.2s ease;
-    }
-
-    .feature-card:hover {
-      transform: translateY(-2px);
-      border-color: var(--gold-border);
-    }
-
-    .feature-icon {
-      width: 2.75rem;
-      height: 2.75rem;
-      border-radius: 0.75rem;
-      background-color: var(--bg-hover);
-      border: 1px solid var(--gold-border);
-      display: grid;
-      place-items: center;
-      font-size: 1.35rem;
-      margin-block-end: 1rem;
-    }
-
-    .feature-card h3 {
-      font-size: 1.1rem;
-      font-weight: 700;
-      margin: 0 0 0.5rem;
-      color: #ffffff;
-    }
-
-    .feature-card p {
-      font-size: 0.92rem;
-      color: var(--text-secondary);
-      margin: 0;
-    }
-
-    .mono-tag {
-      display: inline-block;
-      margin-block-start: 0.85rem;
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      color: var(--gold-primary);
-      background-color: rgba(13, 11, 24, 0.75);
-      border: 1px solid var(--border-subtle);
-      padding: 0.2rem 0.55rem;
-      border-radius: 0.4rem;
-    }
-
-    /* Responsive Data Table (modern-web-guidance responsive-table pattern) */
-    .table-wrapper {
-      overflow: auto;
-      max-inline-size: 100%;
-      max-block-size: min(640px, 82vh);
-      container-type: inline-size;
-      border-radius: 1.1rem;
-      border: 1px solid var(--border-subtle);
-      background-color: var(--bg-card);
-      box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.7);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      font-size: 0.92rem;
-      --label-1: "Señal / Factor Analizado";
-      --label-2: "Impacto";
-      --label-3: "Explicación Forense";
-    }
-
-    caption {
-      text-align: left;
-      padding: 1.1rem 1.25rem;
-      font-weight: 700;
-      font-size: 0.95rem;
-      color: var(--gold-light);
-      background-color: #120e24;
-      border-block-end: 1px solid var(--border-subtle);
-    }
-
-    /* Sticky column headers (desktop) */
-    thead {
-      position: sticky;
-      inset-block-start: 0;
-      z-index: 2;
-      background-color: #1f193d;
-    }
-
-    thead th {
-      text-align: left;
-      padding: 0.9rem 1.15rem;
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--gold-primary);
-      border-block-end: 1px solid var(--border-subtle);
-    }
-
-    tbody tr {
-      transition: background-color 0.15s ease;
-    }
-
-    tbody tr:hover {
-      background-color: rgba(31, 25, 61, 0.55);
-    }
-
-    /* Sticky row headers (desktop) */
-    tbody th {
-      position: sticky;
-      inset-inline-start: 0;
-      z-index: 1;
-      background-color: var(--bg-card);
-      text-align: left;
-      padding: 0.9rem 1.15rem;
-      font-weight: 600;
-      color: var(--text-primary);
-      border-block-end: 1px solid rgba(43, 35, 84, 0.65);
-    }
-
-    tbody td {
-      padding: 0.9rem 1.15rem;
-      color: var(--text-secondary);
-      border-block-end: 1px solid rgba(43, 35, 84, 0.65);
-    }
-
-    .delta-badge {
-      font-family: var(--font-mono);
-      font-weight: 700;
-      font-size: 0.82rem;
-      padding: 0.2rem 0.55rem;
-      border-radius: 0.4rem;
-      display: inline-block;
-    }
-
-    .delta-base {
-      color: #c4b5fd;
-      background-color: rgba(79, 70, 229, 0.2);
-      border: 1px solid #4f46e5;
-    }
-
-    .delta-pos {
-      color: var(--safe-text);
-      background-color: var(--safe-bg);
-      border: 1px solid var(--safe-border);
-    }
-
-    .delta-neg {
-      color: var(--danger-text);
-      background-color: var(--danger-bg);
-      border: 1px solid var(--danger-border);
-    }
-
-    @container (width < 600px) {
-
-      table,
-      thead,
-      tbody,
-      tr,
-      th,
-      td {
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Escudo Criollo v0.2.0 (by Raggiodev) — Defensa Forense Anti-Estafas 100% Local</title>
+    <meta
+      name="description"
+      content="El Steamcito de la seguridad para compras online y finanzas en Argentina y LATAM. Detectá tiendas truchas, phishing financiero, sellos Data Fiscal ARCA/AFIP falsos, CUITs inválidos y limpiá links con rastreadores."
+    />
+    <link rel="canonical" href="https://escudo-criollo.raggiodev.com/" />
+    <link rel="icon" type="image/png" href="./favicon.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://escudo-criollo.raggiodev.com/" />
+    <meta property="og:title" content="Escudo Criollo v0.2.0 (by Raggiodev) — Defensa Anti-Estafas 100% Local" />
+    <meta
+      property="og:description"
+      content="Protección forense en tiempo real contra tiendas online truchas, dominios phishing, sellos Data Fiscal ARCA/AFIP falsificados, CUITs inválidos y enlaces con rastreadores."
+    />
+    <meta name="theme-color" content="#0D0B18" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-canvas: #0d0b18;
+        --bg-surface: #141126;
+        --bg-elevated: #1c1736;
+        --bg-inset: #090711;
+        --border-subtle: #2b2354;
+        --border-focus: #fbbf24;
+        --gold-primary: #fbbf24;
+        --gold-light: #fde68a;
+        --gold-deep: #d97706;
+        --gold-border: rgba(251, 191, 36, 0.36);
+        --violet-primary: #7c3aed;
+        --indigo-primary: #4f46e5;
+        --blue-primary: #2563eb;
+        --celeste-flag: #38bdf8;
+        --text-primary: #f8fafc;
+        --text-secondary: #d1d5db;
+        --text-muted: #9ca3af;
+        --safe-text: #34d399;
+        --safe-bg: rgba(6, 78, 59, 0.65);
+        --safe-border: #10b981;
+        --warn-text: #fbbf24;
+        --warn-bg: rgba(69, 26, 3, 0.65);
+        --warn-border: #f59e0b;
+        --danger-text: #f87171;
+        --danger-bg: rgba(69, 10, 10, 0.78);
+        --danger-border: #ef4444;
+        --brand-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #2563eb 100%);
+        --shadow-elevated: 0 18px 40px -12px rgba(4, 3, 10, 0.78);
+        --shadow-button: 0 12px 28px -8px rgba(4, 3, 10, 0.85);
+        --font-sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+        --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+        color-scheme: dark;
+        caret-color: var(--gold-primary);
+        scrollbar-color: #3b2f73 #0d0b18;
+        scrollbar-width: thin;
+      }
+
+      ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: var(--bg-canvas);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #2f255c;
+        border-radius: 5px;
+        border: 2px solid var(--bg-canvas);
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #48388a;
+      }
+
+      ::selection {
+        background-color: rgba(251, 191, 36, 0.26);
+        color: var(--gold-light);
+      }
+
+      body {
+        margin: 0;
+        background-color: var(--bg-canvas);
+        background-image:
+          radial-gradient(circle at 12% 8%, rgba(124, 58, 237, 0.16), transparent 36%),
+          radial-gradient(circle at 88% 12%, rgba(37, 99, 235, 0.14), transparent 36%);
+        color: var(--text-primary);
+        font-family: var(--font-sans);
+        line-height: 1.62;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a {
+        color: var(--gold-primary);
+        text-decoration: none;
+        text-underline-offset: 0.22em;
+        transition: color 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
+      }
+
+      a:hover {
+        color: var(--gold-light);
+        text-decoration: underline;
+      }
+
+      :where(a:any-link, button, summary, [tabindex="0"]):focus-visible {
+        outline: 2px solid var(--border-focus);
+        outline-offset: 3px;
+      }
+
+      code {
+        font-family: var(--font-mono);
+        font-size: 0.86em;
+        color: var(--gold-light);
+        background-color: var(--bg-inset);
+        border: 1px solid var(--border-subtle);
+        padding: 0.14rem 0.42rem;
+        border-radius: 0.35rem;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .container {
+        width: min(1140px, calc(100% - 2.25rem));
+        margin-inline: auto;
+      }
+
+      /* Top Sticky Navigation */
+      .site-header {
+        position: sticky;
+        inset-block-start: 0;
+        z-index: 60;
+        background-color: rgba(13, 11, 24, 0.94);
+        border-block-end: 1px solid var(--border-subtle);
+      }
+
+      .nav-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.25rem;
+        padding-block: 0.85rem;
+        flex-wrap: wrap;
+      }
+
+      .brand-identity {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.8rem;
+        text-decoration: none;
+      }
+
+      .brand-identity:hover {
+        text-decoration: none;
+      }
+
+      .emblem-frame {
+        width: 2.65rem;
+        height: 2.65rem;
+        border-radius: 0.75rem;
+        background-color: var(--bg-surface);
+        border: 1px solid var(--gold-border);
+        display: grid;
+        place-items: center;
+        box-shadow: 0 8px 20px -6px rgba(4, 3, 10, 0.75);
+      }
+
+      .brand-title {
+        font-weight: 800;
+        font-size: 1.08rem;
+        color: #ffffff;
+        letter-spacing: -0.02em;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .version-pill {
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        padding: 0.1rem 0.45rem;
+        border-radius: 0.35rem;
+        background-color: var(--bg-surface);
+        color: var(--gold-primary);
+        border: 1px solid var(--gold-border);
+      }
+
+      .brand-sub {
+        font-size: 0.78rem;
+        color: var(--text-muted);
         display: block;
       }
 
-      thead {
-        /* MANDATORY: Hide column header from layout and screen readers. */
-        display: none;
+      .nav-cluster {
+        display: flex;
+        align-items: center;
+        gap: 1.35rem;
+        flex-wrap: wrap;
       }
 
-      tbody tr {
-        margin: 0.85rem;
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        flex-wrap: wrap;
+        font-size: 0.88rem;
+        font-weight: 600;
+      }
+
+      .nav-links a {
+        color: var(--text-secondary);
+      }
+
+      .nav-links a:hover {
+        color: var(--gold-primary);
+        text-decoration: none;
+      }
+
+      .btn-nav-install {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.52rem 1rem;
+        border-radius: 0.65rem;
+        background: var(--brand-gradient);
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 0.82rem;
+        letter-spacing: 0.03em;
+        border: 1px solid var(--gold-border);
+        box-shadow: var(--shadow-button);
+        text-decoration: none;
+      }
+
+      .btn-nav-install:hover {
+        color: #ffffff;
+        text-decoration: none;
+        filter: brightness(1.1);
+      }
+
+      /* Hero Split Architecture */
+      .hero {
+        padding-block: 4.5rem 3.75rem;
+        border-block-end: 1px solid rgba(43, 35, 84, 0.6);
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 2.75rem;
+        align-items: center;
+      }
+
+      @media (max-width: 940px) {
+        .hero-grid {
+          grid-template-columns: 1fr;
+          gap: 2.25rem;
+        }
+      }
+
+      .hero h1 {
+        font-size: clamp(2.15rem, 4.4vw, 3.35rem);
+        font-weight: 900;
+        line-height: 1.1;
+        letter-spacing: -0.032em;
+        margin: 0 0 1.25rem;
+        max-inline-size: 20ch;
+        text-wrap: balance;
+      }
+
+      .steamcito-highlight {
+        color: var(--gold-primary);
+        text-decoration: underline;
+        text-decoration-color: rgba(251, 191, 36, 0.45);
+        text-underline-offset: 0.16em;
+      }
+
+      .steamcito-highlight:hover {
+        color: var(--gold-light);
+        text-decoration-color: var(--gold-light);
+      }
+
+      .hero-lead {
+        font-size: clamp(1rem, 1.45vw, 1.12rem);
+        color: var(--text-secondary);
+        max-inline-size: 64ch;
+        margin: 0 0 1.85rem;
+      }
+
+      /* Steamcito-Inspired Dynamic Installer Block */
+      .installer-box {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1.1rem;
+      }
+
+      .cta-row {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        flex-wrap: wrap;
+      }
+
+      .btn-hero-install {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.95rem 1.7rem;
+        border-radius: 0.9rem;
+        background: var(--brand-gradient);
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 1.02rem;
+        border: 1px solid var(--gold-primary);
+        box-shadow: var(--shadow-button);
+        text-decoration: none;
+        transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), filter 0.16s ease;
+      }
+
+      .btn-hero-install:hover {
+        color: #ffffff;
+        text-decoration: none;
+        filter: brightness(1.08);
+        transform: translateY(-1px);
+      }
+
+      .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        padding: 0.92rem 1.35rem;
+        border-radius: 0.9rem;
+        background-color: var(--bg-surface);
+        color: var(--gold-light);
+        font-weight: 700;
+        font-size: 0.93rem;
         border: 1px solid var(--border-subtle);
-        border-radius: 0.85rem;
-        overflow: hidden;
-        background-color: #120e24;
+        text-decoration: none;
+      }
+
+      .btn-secondary:hover {
+        background-color: var(--bg-elevated);
+        border-color: var(--gold-border);
+        text-decoration: none;
+      }
+
+      .trust-guarantees {
+        list-style: none;
+        margin: 0.25rem 0 0;
+        padding: 0;
+        display: grid;
+        gap: 0.38rem;
+        font-size: 0.88rem;
+        color: var(--text-secondary);
+      }
+
+      .trust-guarantees li {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+      }
+
+      .check-mark {
+        color: var(--safe-text);
+        font-weight: 800;
+        font-family: var(--font-mono);
+      }
+
+      .github-inline-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        color: var(--text-primary);
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        padding: 0.12rem 0.5rem;
+        border-radius: 0.4rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+
+      .github-inline-link:hover {
+        border-color: var(--gold-border);
+        color: var(--gold-light);
+        text-decoration: none;
+      }
+
+      /* Live Forensic Telemetry Specimen Panel (Right Hero Column) */
+      .telemetry-specimen {
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        border-radius: 1.15rem;
+        padding: 1.4rem;
+        box-shadow: var(--shadow-elevated);
+        display: grid;
+        gap: 0.9rem;
+      }
+
+      .specimen-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding-block-end: 0.85rem;
+        border-block-end: 1px solid var(--border-subtle);
+      }
+
+      .specimen-title {
+        font-size: 0.84rem;
+        font-weight: 700;
+        color: var(--gold-light);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .specimen-tag {
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .verdict-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.7rem 0.95rem;
+        border-radius: 0.8rem;
+        background-color: var(--bg-inset);
+        font-size: 0.84rem;
+        font-weight: 600;
+      }
+
+      .verdict-row.safe {
+        border: 1px solid var(--safe-border);
+      }
+
+      .verdict-row.warn {
+        border: 1px solid var(--warn-border);
+      }
+
+      .verdict-row.danger {
+        border: 1px solid var(--danger-border);
+      }
+
+      .verdict-left {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        min-width: 0;
+      }
+
+      .status-dot {
+        width: 0.55rem;
+        height: 0.55rem;
+        border-radius: 9999px;
+        flex-shrink: 0;
+      }
+
+      .status-dot.safe {
+        background-color: var(--safe-text);
+      }
+
+      .status-dot.warn {
+        background-color: var(--warn-text);
+      }
+
+      .status-dot.danger {
+        background-color: var(--danger-text);
+      }
+
+      .score-chip {
+        font-family: var(--font-mono);
+        font-size: 0.76rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        padding: 0.14rem 0.55rem;
+        border-radius: 9999px;
+        flex-shrink: 0;
+      }
+
+      .score-chip.safe {
+        color: var(--safe-text);
+        background-color: var(--safe-bg);
+        border: 1px solid var(--safe-border);
+      }
+
+      .score-chip.warn {
+        color: var(--warn-text);
+        background-color: var(--warn-bg);
+        border: 1px solid var(--warn-border);
+      }
+
+      .score-chip.danger {
+        color: var(--danger-text);
+        background-color: var(--danger-bg);
+        border: 1px solid var(--danger-border);
+      }
+
+      .specimen-footer {
+        font-size: 0.76rem;
+        color: var(--text-muted);
+        padding-block-start: 0.35rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      /* Section Typography */
+      section.page-section {
+        padding-block: 4.25rem 3.5rem;
+        border-block-end: 1px solid rgba(43, 35, 84, 0.55);
+      }
+
+      .section-intro {
+        max-inline-size: 68ch;
+        margin-block-end: 2.4rem;
+      }
+
+      .section-intro h2 {
+        font-size: clamp(1.65rem, 2.8vw, 2.25rem);
+        font-weight: 800;
+        margin: 0 0 0.65rem;
+        letter-spacing: -0.025em;
+        text-wrap: balance;
+      }
+
+      .section-intro p {
+        color: var(--text-secondary);
+        margin: 0;
+        font-size: 1rem;
+      }
+
+      /* Browser Store Installation Matrix (#instalar) */
+      .stores-ledger {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.25rem;
+      }
+
+      @media (max-width: 920px) {
+        .stores-ledger {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .store-panel {
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        border-radius: 1.1rem;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 1.25rem;
+        box-shadow: var(--shadow-elevated);
+        transition: border-color 0.2s ease, transform 0.2s ease;
+      }
+
+      .store-panel.detected-browser {
+        border-color: var(--gold-primary);
+        background-color: #181430;
+      }
+
+      .store-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.75rem;
+      }
+
+      .browser-identity {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+      }
+
+      .browser-icon-box {
+        width: 2.85rem;
+        height: 2.85rem;
+        border-radius: 0.75rem;
+        background-color: var(--bg-inset);
+        border: 1px solid var(--border-subtle);
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+      }
+
+      .store-panel h3 {
+        font-size: 1.08rem;
+        font-weight: 800;
+        margin: 0;
+        color: #ffffff;
+      }
+
+      .store-channel {
+        font-size: 0.78rem;
+        color: var(--gold-light);
+        font-family: var(--font-mono);
+      }
+
+      .detected-badge {
+        display: none;
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--safe-text);
+        background-color: var(--safe-bg);
+        border: 1px solid var(--safe-border);
+        padding: 0.18rem 0.55rem;
+        border-radius: 9999px;
+        white-space: nowrap;
+      }
+
+      .store-panel.detected-browser .detected-badge {
+        display: inline-block;
+      }
+
+      .store-desc {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin: 0;
+      }
+
+      .btn-store-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.6rem;
+        width: 100%;
+        padding: 0.8rem 1.1rem;
+        border-radius: 0.75rem;
+        background-color: var(--bg-elevated);
+        color: var(--text-primary);
+        font-weight: 700;
+        font-size: 0.9rem;
+        border: 1px solid var(--gold-border);
+        text-decoration: none;
+      }
+
+      .store-panel.detected-browser .btn-store-action {
+        background: var(--brand-gradient);
+        color: #ffffff;
+        border-color: var(--gold-primary);
+      }
+
+      .btn-store-action:hover {
+        color: #ffffff;
+        background-color: #29224d;
+        text-decoration: none;
+      }
+
+      /* Forensic Engines Architectural Ledger (#motores) */
+      .engines-ledger {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .engine-row {
+        display: grid;
+        grid-template-columns: 280px 1fr 240px;
+        gap: 1.5rem;
+        align-items: start;
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        border-radius: 1rem;
+        padding: 1.4rem 1.5rem;
+      }
+
+      @media (max-width: 900px) {
+        .engine-row {
+          grid-template-columns: 1fr;
+          gap: 0.85rem;
+        }
+      }
+
+      .engine-row h3 {
+        font-size: 1.04rem;
+        font-weight: 800;
+        margin: 0 0 0.35rem;
+        color: #ffffff;
+      }
+
+      .engine-module-path {
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        color: var(--gold-primary);
+      }
+
+      .engine-body p {
+        margin: 0;
+        font-size: 0.93rem;
+        color: var(--text-secondary);
+        max-inline-size: 68ch;
+      }
+
+      .engine-spec {
+        background-color: var(--bg-inset);
+        border: 1px solid var(--border-subtle);
+        border-radius: 0.7rem;
+        padding: 0.75rem 0.9rem;
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        color: var(--gold-light);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .engine-spec span {
+        display: block;
+        color: var(--text-muted);
+        font-size: 0.78rem;
+        margin-block-end: 0.2rem;
+      }
+
+      /* Transparent Scoring Methodology Table */
+      .table-wrapper {
+        overflow: auto;
+        max-inline-size: 100%;
+        container-type: inline-size;
+        border-radius: 1.05rem;
+        border: 1px solid var(--border-subtle);
+        background-color: var(--bg-surface);
+        padding: 0.85rem 1rem;
+        box-shadow: var(--shadow-elevated);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 0.91rem;
+        font-variant-numeric: tabular-nums;
+        --label-1: "Señal / Factor Analizado";
+        --label-2: "Impacto";
+        --label-3: "Explicación Forense";
+      }
+
+      caption {
+        text-align: left;
+        padding: 1.1rem 1.25rem;
+        font-weight: 700;
+        font-size: 0.94rem;
+        color: var(--gold-light);
+        background-color: var(--bg-inset);
+        border-block-end: 1px solid var(--border-subtle);
+      }
+
+      thead {
+        position: sticky;
+        inset-block-start: 0;
+        z-index: 2;
+        background-color: var(--bg-elevated);
+      }
+
+      thead th {
+        text-align: left;
+        padding: 0.9rem 1.15rem;
+        font-size: 0.77rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--gold-primary);
+        border-block-end: 1px solid var(--border-subtle);
+      }
+
+      tbody tr:hover {
+        background-color: rgba(28, 23, 54, 0.65);
       }
 
       tbody th {
         position: sticky;
-        inset-block-start: 0;
-        z-index: 2;
-        background-color: var(--bg-hover);
-        border-block-end: 1px solid var(--border-subtle);
+        inset-inline-start: 0;
+        z-index: 1;
+        background-color: var(--bg-surface);
+        text-align: left;
+        padding: 0.88rem 1.15rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        border-block-end: 1px solid rgba(43, 35, 84, 0.65);
       }
 
       tbody td {
-        padding: 0.7rem 1rem;
+        padding: 0.88rem 1.15rem;
+        color: var(--text-secondary);
+        border-block-end: 1px solid rgba(43, 35, 84, 0.65);
       }
 
-      tbody td:nth-child(2)::before {
-        content: var(--label-2) ": ";
+      .delta-badge {
+        font-family: var(--font-mono);
+        font-weight: 700;
+        font-size: 0.8rem;
+        font-variant-numeric: tabular-nums;
+        padding: 0.2rem 0.55rem;
+        border-radius: 0.4rem;
+        display: inline-block;
+        white-space: nowrap;
+      }
+
+      .delta-base {
+        color: #c4b5fd;
+        background-color: rgba(79, 70, 229, 0.22);
+        border: 1px solid #4f46e5;
+      }
+
+      .delta-pos {
+        color: var(--safe-text);
+        background-color: var(--safe-bg);
+        border: 1px solid var(--safe-border);
+      }
+
+      .delta-neg {
+        color: var(--danger-text);
+        background-color: var(--danger-bg);
+        border: 1px solid var(--danger-border);
+      }
+
+      @container (width < 600px) {
+        table,
+        thead,
+        tbody,
+        tr,
+        th,
+        td {
+          display: block;
+        }
+
+        thead {
+          display: none;
+        }
+
+        tbody tr {
+          margin: 0.85rem;
+          border: 1px solid var(--border-subtle);
+          border-radius: 0.85rem;
+          overflow: hidden;
+          background-color: var(--bg-inset);
+        }
+
+        tbody th {
+          position: sticky;
+          inset-block-start: 0;
+          z-index: 2;
+          background-color: var(--bg-elevated);
+          border-block-end: 1px solid var(--border-subtle);
+        }
+
+        tbody td {
+          padding: 0.7rem 1rem;
+        }
+
+        tbody td:nth-child(2)::before {
+          content: var(--label-2) ": ";
+          font-weight: 700;
+          color: var(--gold-light);
+        }
+
+        tbody td:nth-child(3)::before {
+          content: var(--label-3) ": ";
+          font-weight: 700;
+          color: var(--gold-light);
+        }
+      }
+
+      /* Progressive Disclosure Zero-Trust Section */
+      .details-stack {
+        display: grid;
+        gap: 0.85rem;
+      }
+
+      details.arch-item {
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        border-radius: 0.9rem;
+        padding: 1rem 1.25rem;
+      }
+
+      details.arch-item[open] {
+        border-color: var(--gold-border);
+      }
+
+      details.arch-item summary {
+        list-style: none;
+        cursor: pointer;
         font-weight: 700;
         color: var(--gold-light);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
       }
 
-      tbody td:nth-child(3)::before {
-        content: var(--label-3) ": ";
-        font-weight: 700;
-        color: var(--gold-light);
+      details.arch-item summary::-webkit-details-marker {
+        display: none;
       }
-    }
 
-    /* Progressive Disclosure Details / Architecture FAQ */
-    .details-stack {
-      display: grid;
-      gap: 0.85rem;
-      max-inline-size: 860px;
-      margin-inline: auto;
-    }
+      details.arch-item p {
+        margin: 0.75rem 0 0;
+        color: var(--text-secondary);
+        font-size: 0.93rem;
+        max-inline-size: 72ch;
+      }
 
-    details.arch-item {
-      background-color: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: 0.95rem;
-      padding: 1rem 1.25rem;
-    }
+      /* Footer */
+      .site-footer {
+        background-color: var(--bg-inset);
+        padding-block: 2.5rem;
+        font-size: 0.86rem;
+        color: var(--text-muted);
+      }
 
-    details.arch-item[open] {
-      border-color: var(--gold-border);
-    }
+      .footer-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.25rem;
+        flex-wrap: wrap;
+      }
 
-    details.arch-item summary {
-      list-style: none;
-      cursor: pointer;
-      font-weight: 700;
-      color: var(--gold-light);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-    }
-
-    details.arch-item summary::-webkit-details-marker {
-      display: none;
-    }
-
-    details.arch-item p {
-      margin: 0.75rem 0 0;
-      color: var(--text-secondary);
-      font-size: 0.93rem;
-    }
-
-    /* Footer */
-    .site-footer {
-      margin-block-start: 3rem;
-      border-block-start: 1px solid var(--border-subtle);
-      background-color: #090712;
-      padding-block: 2.5rem;
-      font-size: 0.88rem;
-      color: var(--text-muted);
-    }
-
-    .footer-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1.25rem;
-      flex-wrap: wrap;
-    }
-
-    .footer-links {
-      display: flex;
-      gap: 1.25rem;
-      flex-wrap: wrap;
-    }
-  </style>
-</head>
-
-<body>
-  <header class="site-header">
-    <div class="container nav-bar">
-      <a href="./index.html" class="brand-identity">
-        <span class="shield-emblem" aria-hidden="true">🛡️</span>
-        <span>
-          <span class="brand-title">
-            Escudo Criollo
-            <span class="version-pill">v0.1.5</span>
+      .footer-links {
+        display: flex;
+        gap: 1.25rem;
+        flex-wrap: wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav-bar">
+        <a href="./index.html" class="brand-identity">
+          <span class="emblem-frame" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="nav-v" x1="6" y1="4" x2="58" y2="60" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#4F46E5" />
+                  <stop offset="52%" stop-color="#7C3AED" />
+                  <stop offset="100%" stop-color="#2563EB" />
+                </linearGradient>
+                <linearGradient id="nav-g" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#FDE68A" />
+                  <stop offset="50%" stop-color="#F59E0B" />
+                  <stop offset="100%" stop-color="#D97706" />
+                </linearGradient>
+                <clipPath id="nav-c">
+                  <path d="M32 10L13 16.5V30.8C13 43.4 21.1 52.8 32 56.5C42.9 52.8 51 43.4 51 30.8V16.5L32 10Z" />
+                </clipPath>
+              </defs>
+              <path d="M32 4.5L8.5 12.5V30.5C8.5 46.2 18.5 57.6 32 61.5C45.5 57.6 55.5 46.2 55.5 30.5V12.5L32 4.5Z" fill="url(#nav-v)" stroke="url(#nav-g)" stroke-width="3.2" stroke-linejoin="round" />
+              <g clip-path="url(#nav-c)">
+                <rect x="10" y="8" width="44" height="50" fill="#0D0B18" />
+                <rect x="10" y="11" width="44" height="7.5" fill="#38BDF8" />
+                <rect x="10" y="18.5" width="44" height="7" fill="#F8FAFC" />
+                <rect x="10" y="25.5" width="44" height="7.5" fill="#38BDF8" />
+                <circle cx="32" cy="22" r="3.2" fill="#F59E0B" />
+              </g>
+              <path d="M33.5 31L43.5 15.5" stroke="url(#nav-g)" stroke-width="3.2" stroke-linecap="round" />
+              <path d="M25.5 49.5H38.5L36.5 46H27.5L25.5 49.5Z" fill="url(#nav-g)" />
+              <path d="M20.5 34.5C20.5 42.2 25.3 47.2 32 47.2C38.7 47.2 43.5 42.2 43.5 34.5C43.5 31.3 42.1 28.8 40.3 27.5H23.7C21.9 28.8 20.5 31.3 20.5 34.5Z" fill="#1E1B4B" stroke="url(#nav-g)" stroke-width="2.2" />
+              <ellipse cx="32" cy="27.5" rx="8.8" ry="2.5" fill="#1E1B4B" stroke="#FDE68A" stroke-width="2" />
+            </svg>
           </span>
-          <span class="brand-sub">Defensa Anti-Estafas · by Raggiodev</span>
-        </span>
-      </a>
-
-      <nav class="nav-links" aria-label="Navegación principal">
-        <a href="#motores">Motores Forenses</a>
-        <a href="#puntaje">Metodología (0–100)</a>
-        <a href="#arquitectura">Seguridad Zero-Trust</a>
-        <a href="./privacidad.html">Política de Privacidad</a>
-        <a href="https://github.com/raggiodev/escudo-criollo" target="_blank" rel="noopener noreferrer">
-          GitHub
+          <span>
+            <span class="brand-title">
+              Escudo Criollo
+              <span class="version-pill">v0.2.0</span>
+            </span>
+            <span class="brand-sub">Defensa Forense · by Raggiodev</span>
+          </span>
         </a>
-      </nav>
-    </div>
-  </header>
 
-  <main>
-    <!-- HERO -->
-    <section class="hero container">
-      <div class="eyebrow-badge">
-        <span>🇦🇷 100% Local · Zero-Server · Especial CyberMonday &amp; Hot Sale</span>
-      </div>
+        <div class="nav-cluster">
+          <nav class="nav-links" aria-label="Navegación principal">
+            <a href="#instalar">Tiendas Oficiales</a>
+            <a href="#motores">Motores Forenses</a>
+            <a href="#puntaje">Metodología (0–100)</a>
+            <a href="#arquitectura">Zero-Trust</a>
+            <a href="./privacidad.html">Privacidad</a>
+          </nav>
 
-      <h1>
-        El <a href="https://steamcito.com.ar/" target="_blank" rel="noopener noreferrer"
-          class="gold-gradient-text">“Steamcito”</a> de la seguridad para tus compras online
-      </h1>
-
-      <p class="hero-lead">
-        <strong>Escudo Criollo</strong> analiza en tiempo real cualquier tienda online en Argentina y Latinoamérica para
-        detectar
-        <strong>sellos Data Fiscal ARCA/AFIP falsificados</strong>, <strong>CUITs apócrifos</strong>, <strong>tiendas
-          truchas de Instagram/Facebook</strong> y
-        <strong>enlaces plagados de rastreadores</strong>—directamente en tu navegador y sin enviar tus datos a ningún
-        servidor.
-      </p>
-
-      <div class="cta-group">
-        <a href="./demo-tienda-trucha.html" class="btn-primary">
-          <span>🧪 Probar Tienda Trucha de Demostración (Demo)</span>
-        </a>
-        <a href="#puntaje" class="btn-secondary">
-          <span>📊 Ver Metodología del Puntaje</span>
-        </a>
-        <a href="./privacidad.html" class="btn-secondary">
-          <span>🔒 Política de Privacidad</span>
-        </a>
-        <a href="https://github.com/raggiodev/escudo-criollo" class="btn-secondary" target="_blank"
-          rel="noopener noreferrer">
-          <span>💻 Ver en GitHub</span>
-        </a>
-      </div>
-
-      <div class="pill-showcase" aria-label="Ejemplos de indicadores en pantalla">
-        <div class="demo-pill safe">
-          <span class="dot safe" aria-hidden="true"></span>
-          <span>🛡️ Tienda Verificada · CUIT OK</span>
-          <span class="score-chip safe">100</span>
-        </div>
-        <div class="demo-pill warn">
-          <span class="dot warn" aria-hidden="true"></span>
-          <span>⚠️ Precaución · Sin Data Fiscal</span>
-          <span class="score-chip warn">65</span>
-        </div>
-        <div class="demo-pill danger">
-          <span class="dot danger" aria-hidden="true"></span>
-          <span>🚨 Alerta: Posible Tienda Trucha</span>
-          <span class="score-chip danger">10</span>
+          <a href="#instalar" class="btn-nav-install" aria-label="Ir a la sección Instalar en tu navegador">
+            <svg width="15" height="15" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true">
+              <path d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32V274.7l-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L288 274.7V32zM64 352c-35.3 0-64 28.7-64 64v32c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V416c0-35.3-28.7-64-64-64H346.5l-45.3 45.3c-25 25-65.5 25-90.5 0L165.5 352H64zm368 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48z" />
+            </svg>
+            <span>INSTALAR</span>
+          </a>
         </div>
       </div>
-    </section>
+    </header>
 
-    <!-- 4 CORES -->
-    <section id="motores" class="container">
-      <div class="section-header">
-        <h2>Cuatro Motores Forenses en Tiempo Real</h2>
-        <p>
-          Protección pasiva y contextual mientras navegás por tiendas de ropa, tecnología, electrodomésticos y ofertas.
-        </p>
-      </div>
+    <main>
+      <!-- HERO -->
+      <section class="hero container">
+        <div class="hero-grid">
+          <div>
+            <h1>
+              El <a href="https://steamcito.com.ar/" target="_blank" rel="noopener noreferrer" class="steamcito-highlight">“Steamcito”</a> de la seguridad para tus compras online
+            </h1>
 
-      <div class="features-grid">
-        <article class="feature-card">
-          <div class="feature-icon" aria-hidden="true">🕵️‍♂️</div>
-          <h3>Inspector Forense QR F.960 (ARCA / AFIP)</h3>
+            <p class="hero-lead">
+              <strong>Escudo Criollo</strong> audita en tiempo real tiendas online, marketplaces y portales financieros en Argentina y Latinoamérica para detectar
+              <strong>sellos Data Fiscal ARCA/AFIP falsificados</strong>, <strong>CUITs apócrifos</strong>, <strong>dominios imitadores (phishing)</strong> y
+              <strong>enlaces con rastreadores</strong>—100% en la memoria local de tu navegador.
+            </p>
+
+            <div class="installer-box">
+              <div class="cta-row">
+                <a
+                  id="hero-install-btn"
+                  href="https://chromewebstore.google.com/detail/escudo-criollo-by-raggiod/hlfipneanelbaghjdjbnmfiifegldkpp"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="btn-hero-install"
+                >
+                  <svg width="18" height="18" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true">
+                    <path d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32V274.7l-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L288 274.7V32zM64 352c-35.3 0-64 28.7-64 64v32c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V416c0-35.3-28.7-64-64-64H346.5l-45.3 45.3c-25 25-65.5 25-90.5 0L165.5 352H64zm368 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48z" />
+                  </svg>
+                  <span id="hero-install-label">Instalar en Google Chrome</span>
+                </a>
+
+                <a href="./demo-tienda-trucha.html" class="btn-secondary">
+                  <span>Probar Simulador de Tienda Trucha</span>
+                </a>
+              </div>
+
+              <ul class="trust-guarantees" aria-label="Garantías de código abierto y privacidad">
+                <li>
+                  <span class="check-mark" aria-hidden="true">✓</span>
+                  <span>Libre y gratuita · 100% procesamiento local (Zero-Server)</span>
+                </li>
+                <li>
+                  <span class="check-mark" aria-hidden="true">✓</span>
+                  <span>Colaborativa y de código abierto</span>
+                  <a
+                    href="https://github.com/raggiodev/escudo-criollo"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="github-inline-link"
+                    aria-label="Ver repositorio de código abierto en GitHub"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+                    </svg>
+                    <span>GitHub</span>
+                  </a>
+                </li>
+                <li>
+                  <span class="check-mark" aria-hidden="true">✓</span>
+                  <span>Auditada por la comunidad</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Right Column: Live Verdicts Telemetry Specimen -->
+          <aside class="telemetry-specimen" aria-label="Muestras de veredictos en pantalla">
+            <div class="specimen-header">
+              <span class="specimen-title">Veredictos Contextuales en Pantalla</span>
+              <span class="specimen-tag">Shadow DOM · v0.2.0</span>
+            </div>
+
+            <div class="verdict-row safe">
+              <div class="verdict-left">
+                <span class="status-dot safe" aria-hidden="true"></span>
+                <span>Entidad Financiera Oficial · BCRA / CNV</span>
+              </div>
+              <span class="score-chip safe">100</span>
+            </div>
+
+            <div class="verdict-row safe">
+              <div class="verdict-left">
+                <span class="status-dot safe" aria-hidden="true"></span>
+                <span>Tienda Oficial · Verificá al Vendedor</span>
+              </div>
+              <span class="score-chip safe">100</span>
+            </div>
+
+            <div class="verdict-row safe">
+              <div class="verdict-left">
+                <span class="status-dot safe" aria-hidden="true"></span>
+                <span>Sin Señales de Riesgo · CUIT OK</span>
+              </div>
+              <span class="score-chip safe">95</span>
+            </div>
+
+            <div class="verdict-row warn">
+              <div class="verdict-left">
+                <span class="status-dot warn" aria-hidden="true"></span>
+                <span>Precaución · Sin Data Fiscal F.960</span>
+              </div>
+              <span class="score-chip warn">55</span>
+            </div>
+
+            <div class="verdict-row danger">
+              <div class="verdict-left">
+                <span class="status-dot danger" aria-hidden="true"></span>
+                <span>Alerta: Dominio Imitador (Posible Phishing)</span>
+              </div>
+              <span class="score-chip danger">0</span>
+            </div>
+
+            <div class="specimen-footer">
+              <span>Auditoría heurística local · No reemplaza la verificación en ARCA.</span>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- DEDICATED #instalar SECTION: 3 OFFICIAL BROWSER STORES -->
+      <section id="instalar" class="page-section container">
+        <div class="section-intro">
+          <h2>Instalar en tu navegador</h2>
           <p>
-            Distingue sellos Data Fiscal oficiales que redirigen a <code>qr.afip.gob.ar</code> frente a imágenes
-            estáticas pegadas o con enlaces rotos (<code>href="#"</code>) usadas por estafadores.
+            Disponible para los principales navegadores basados en Chromium y Gecko. 100% procesamiento local y código abierto.
           </p>
-          <span class="mono-tag">Soporte SPA + Normalización QR</span>
-        </article>
+        </div>
 
-        <article class="feature-card">
-          <div class="feature-icon" aria-hidden="true">🧮</div>
-          <h3>Validador Matemático de CUIT (Módulo 11)</h3>
+        <div class="stores-ledger">
+          <!-- Store 1: Google Chrome / Brave -->
+          <article class="store-panel" data-browser="chrome">
+            <div>
+              <div class="store-head">
+                <div class="browser-identity">
+                  <div class="browser-icon-box" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="#FBBF24" stroke-width="2" />
+                      <circle cx="12" cy="12" r="4" fill="#38BDF8" />
+                      <path d="M12 8H21.1" stroke="#F8FAFC" stroke-width="1.8" />
+                      <path d="M8.5 14L3.9 6.1" stroke="#F8FAFC" stroke-width="1.8" />
+                      <path d="M15.5 14L10.9 21.9" stroke="#F8FAFC" stroke-width="1.8" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3>Google Chrome / Brave</h3>
+                    <span class="store-channel">Chrome Web Store Oficial</span>
+                  </div>
+                </div>
+                <span class="detected-badge">Detectado: Tu navegador actual</span>
+              </div>
+              <p class="store-desc" style="margin-top: 0.9rem">
+                Instalación directa en 1 clic con actualizaciones automáticas para Google Chrome, Brave, Vivaldi y Opera.
+              </p>
+            </div>
+
+            <a
+              id="store-link-chrome"
+              href="https://chromewebstore.google.com/detail/escudo-criollo-by-raggiod/hlfipneanelbaghjdjbnmfiifegldkpp"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn-store-action"
+            >
+              <svg width="15" height="15" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true">
+                <path d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32V274.7l-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L288 274.7V32zM64 352c-35.3 0-64 28.7-64 64v32c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V416c0-35.3-28.7-64-64-64H346.5l-45.3 45.3c-25 25-65.5 25-90.5 0L165.5 352H64zm368 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48z" />
+              </svg>
+              <span>Instalar en Google Chrome</span>
+            </a>
+          </article>
+
+          <!-- Store 2: Microsoft Edge -->
+          <article class="store-panel" data-browser="edge">
+            <div>
+              <div class="store-head">
+                <div class="browser-identity">
+                  <div class="browser-icon-box" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M4 15.5C4 9.5 8.8 5 14.5 5C18.2 5 20.5 7.2 20.5 10C20.5 12.8 18.2 14.5 15.5 14.5C13.2 14.5 11.5 13.2 11.5 11.5C11.5 10.2 12.6 9.2 14 9.2"
+                        stroke="#38BDF8"
+                        stroke-width="2.2"
+                        stroke-linecap="round"
+                      />
+                      <path
+                        d="M4.5 14.5C5.8 18 9.2 20 13.5 20C16.8 20 19.2 18.7 20.5 17"
+                        stroke="#34D399"
+                        stroke-width="2.2"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3>Microsoft Edge</h3>
+                    <span class="store-channel">Microsoft Edge Add-ons</span>
+                  </div>
+                </div>
+                <span class="detected-badge">Detectado: Tu navegador actual</span>
+              </div>
+              <p class="store-desc" style="margin-top: 0.9rem">
+                Compatible nativamente en Edge desde Chrome Web Store y Microsoft Edge Add-ons con soporte completo Manifest V3.
+              </p>
+            </div>
+
+            <a
+              id="store-link-edge"
+              href="https://chromewebstore.google.com/detail/escudo-criollo-by-raggiod/hlfipneanelbaghjdjbnmfiifegldkpp"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn-store-action"
+            >
+              <svg width="15" height="15" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true">
+                <path d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32V274.7l-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L288 274.7V32zM64 352c-35.3 0-64 28.7-64 64v32c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V416c0-35.3-28.7-64-64-64H346.5l-45.3 45.3c-25 25-65.5 25-90.5 0L165.5 352H64zm368 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48z" />
+              </svg>
+              <span>Instalar en Microsoft Edge</span>
+            </a>
+          </article>
+
+          <!-- Store 3: Mozilla Firefox -->
+          <article class="store-panel" data-browser="firefox">
+            <div>
+              <div class="store-head">
+                <div class="browser-identity">
+                  <div class="browser-icon-box" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="9.5" stroke="#F59E0B" stroke-width="2" />
+                      <path
+                        d="M15.5 7.5C12.5 6.8 9.2 8.5 8.5 11.8C7.9 14.6 9.8 17.2 12.6 17.5C15.1 17.8 17.2 16 17.5 13.5"
+                        stroke="#F87171"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3>Mozilla Firefox</h3>
+                    <span class="store-channel">Firefox Browser Add-ons (AMO)</span>
+                  </div>
+                </div>
+                <span class="detected-badge">Detectado: Tu navegador actual</span>
+              </div>
+              <p class="store-desc" style="margin-top: 0.9rem">
+                Empaquetado nativo para motor Gecko (<code>escudo-criollo@raggiodev.com</code> · Firefox 109.0+).
+              </p>
+            </div>
+
+            <a
+              id="store-link-firefox"
+              href="https://github.com/raggiodev/escudo-criollo"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn-store-action"
+            >
+              <svg width="15" height="15" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true">
+                <path d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32V274.7l-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L288 274.7V32zM64 352c-35.3 0-64 28.7-64 64v32c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V416c0-35.3-28.7-64-64-64H346.5l-45.3 45.3c-25 25-65.5 25-90.5 0L165.5 352H64zm368 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48z" />
+              </svg>
+              <span>Instalar en Mozilla Firefox</span>
+            </a>
+          </article>
+        </div>
+      </section>
+
+      <!-- 4 FORENSIC ENGINES LEDGER (#motores) -->
+      <section id="motores" class="page-section container">
+        <div class="section-intro">
+          <h2>Cuatro Motores Forenses en Tiempo Real</h2>
           <p>
-            Extrae y verifica cada CUIT/CUIL mediante el algoritmo oficial Módulo 11 y prefijos válidos
-            (<code>20..34</code>), rechazando secuencias ficticias y enlazando a la Central de Deudores del BCRA.
+            Protección pasiva y contextual mientras navegás por comercios electrónicos, marketplaces y plataformas financieras.
           </p>
-          <span class="mono-tag">Coeficientes [5,4,3,2,7,6,5,4,3,2]</span>
-        </article>
+        </div>
 
-        <article class="feature-card">
-          <div class="feature-icon" aria-hidden="true">🛡️</div>
-          <h3>Detector Heurístico de Tiendas Truchas</h3>
+        <div class="engines-ledger">
+          <article class="engine-row">
+            <div>
+              <h3>Inspector Forense QR F.960 (ARCA / AFIP)</h3>
+              <span class="engine-module-path">v01-cuit-arca/validator.ts</span>
+            </div>
+            <div class="engine-body">
+              <p>
+                Distingue sellos Data Fiscal oficiales que redirigen a <code>qr.afip.gob.ar</code> frente a imágenes estáticas pegadas o con enlaces rotos (<code>href="#"</code>) usadas por estafadores. Incluye botón directo <strong>Verificar Ficha en ARCA</strong> para contrastar la Razón Social.
+              </p>
+            </div>
+            <div class="engine-spec">
+              <span>Verificación Hidratación SPA</span>
+              Normaliza response.aspx → qr.afip.gob.ar
+            </div>
+          </article>
+
+          <article class="engine-row">
+            <div>
+              <h3>Validador Matemático de CUIT (Módulo 11)</h3>
+              <span class="engine-module-path">config/scoring-config.ts</span>
+            </div>
+            <div class="engine-body">
+              <p>
+                Extrae y verifica cada CUIT/CUIL mediante el algoritmo oficial Módulo 11 y los <strong>9 prefijos oficiales de ARCA/AFIP</strong> (<code>20, 23, 24, 25, 26, 27, 30, 33 y 34</code>), rechazando secuencias ficticias y enlazando en 1 clic a la Central de Deudores del BCRA.
+              </p>
+            </div>
+            <div class="engine-spec">
+              <span>Vector de Coeficientes</span>
+              [5, 4, 3, 2, 7, 6, 5, 4, 3, 2]
+            </div>
+          </article>
+
+          <article class="engine-row">
+            <div>
+              <h3>Heurística Anti-Phishing, Brokers y Tiendas</h3>
+              <span class="engine-module-path">v01-store-heuristics/domain-matcher.ts</span>
+            </div>
+            <div class="engine-body">
+              <p>
+                Reconoce entidades financieras y brokers regulados por BCRA/CNV (ALyCs), marketplaces con aviso preventivo sobre vendedores externos y comercios oficiales. Detecta ataques de <em>typosquatting</em> e imitación homográfica de marcas líderes.
+              </p>
+            </div>
+            <div class="engine-spec">
+              <span>Escala de Veredicto</span>
+              Oficial: 100/100 · Tope Heurístico: 95/100
+            </div>
+          </article>
+
+          <article class="engine-row">
+            <div>
+              <h3>Sanitizador Anti-Rastreo &amp; Auditor de Texto</h3>
+              <span class="engine-module-path">v01-clean-links/sanitizer.ts</span>
+            </div>
+            <div class="engine-body">
+              <p>
+                Elimina automáticamente más de 70 parámetros de seguimiento comercial y afiliados al copiar enlaces, preservando parámetros funcionales y marcas de tiempo en video. Incluye contador de caracteres con detector de caracteres invisibles Unicode BiDi.
+              </p>
+            </div>
+            <div class="engine-spec">
+              <span>Presupuesto de Escaneo</span>
+              Tiempo lineal O(n) · Tope 150 KB
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- TRANSPARENT SCORING METHODOLOGY TABLE -->
+      <section id="puntaje" class="page-section container">
+        <div class="section-intro">
+          <h2>Metodología Transparente del Puntaje (0 a 100)</h2>
           <p>
-            Reconoce comercios oficiales argentinos, eventos CACE (<code>cybermonday.com.ar</code>,
-            <code>hotsale.com.ar</code>) y couriers globales (Amazon, Tiendamia), alertando ante subdominios gratuitos
-            con descuentos truchos por transferencia.
+            Cada sitio auditado exhibe el desglose matemático exacto de puntos positivos y negativos. Los puntajes de 100/100 se reservan exclusivamente para dominios oficiales verificados; las tiendas privadas evaluadas por heurística tienen un tope máximo de 95/100.
           </p>
-          <span class="mono-tag">Auto-Minimizado Sticky 2.5s</span>
-        </article>
+        </div>
 
-        <article class="feature-card">
-          <div class="feature-icon" aria-hidden="true">🧹</div>
-          <h3>Sanitizador de Links Anti-Rastreo</h3>
+        <div
+          tabindex="0"
+          role="region"
+          aria-labelledby="scoring-table-caption"
+          class="table-wrapper"
+        >
+          <table>
+            <caption id="scoring-table-caption">
+              Tabla de ponderación heurística de confianza de Escudo Criollo v0.2.0
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Señal / Factor Analizado</th>
+                <th scope="col">Impacto</th>
+                <th scope="col">Explicación Forense</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Entidad Financiera / Broker Regulado (ALyC / BCRA)</th>
+                <td><span class="delta-badge delta-pos">100 / 100</span></td>
+                <td>
+                  Base institucional (+88), cifrado HTTPS (+10) y dominio regulado verificado (+2) para bancos, billeteras y agentes de liquidación y compensación (ALyCs registrados ante CNV/BCRA).
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Marketplace Oficial (con Aviso de Vendedor Externo)</th>
+                <td><span class="delta-badge delta-pos">100 / 100</span></td>
+                <td>
+                  Plataforma de comercio electrónico oficial verificada (+80 base, +10 HTTPS, +10 dominio) con recordatorio preventivo para verificar la reputación del vendedor individual.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Comercio Oficial Argentino / Evento CACE (HTTPS)</th>
+                <td><span class="delta-badge delta-pos">100 / 100</span></td>
+                <td>
+                  Base oficial (+80), cifrado HTTPS (+10) y dominio oficial / respaldo F.960 verificado (+10) en cadenas nacionales y portales oficiales de eventos CACE.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Plataforma Internacional / Courier Verificado (HTTPS)</th>
+                <td><span class="delta-badge delta-pos">100 / 100</span></td>
+                <td>
+                  Base plataforma internacional (+90) + conexión HTTPS (+10) para tiendas cross-border verificadas que operan bajo régimen de courier internacional.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Tope Máximo Auditoría Heurística Local (Tiendas No Listadas)</th>
+                <td><span class="delta-badge delta-base">Máx. 95 / 100</span></td>
+                <td>
+                  Toda tienda privada evaluada mediante heurística local alcanza un máximo de <code>95/100</code> (veredicto <em>“Sin Señales de Riesgo · CUIT OK”</em>).
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Base Inicial Comercio Online General</th>
+                <td><span class="delta-badge delta-base">+60 pts</span></td>
+                <td>
+                  Punto de partida neutro para cualquier tienda online detectada con controles reales de carrito o motor de e-commerce.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Conexión Cifrada HTTPS Activa</th>
+                <td><span class="delta-badge delta-pos">+10 pts</span></td>
+                <td>
+                  El sitio cifra el tráfico mediante TLS/SSL válido. (Si usa HTTP plano sin cifrado, aplica una penalización de <code>-30 pts</code>).
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Dominio Propio Registrado en NIC Argentina (<code>.com.ar</code>)</th>
+                <td><span class="delta-badge delta-pos">+15 pts</span></td>
+                <td>
+                  Registrar un dominio <code>.com.ar</code> / <code>.ar</code> exige validar identidad fiscal con Clave Fiscal nivel 3 ante ARCA/AFIP en NIC Argentina.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Sello QR Data Fiscal F.960 Oficial Verificado</th>
+                <td><span class="delta-badge delta-pos">+20 pts</span></td>
+                <td>
+                  El formulario F.960 enlaza activamente a <code>*.afip.gob.ar</code> o <code>*.arca.gob.ar</code> (o se detecta en el estado de hidratación SPA del comercio).
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">CUIT Matemáticamente Válido (Módulo 11 · 9 Prefijos)</th>
+                <td><span class="delta-badge delta-pos">+15 pts</span></td>
+                <td>
+                  El CUIT publicado supera la verificación Módulo 11 y posee uno de los 9 prefijos oficiales (<code>20, 23, 24, 25, 26, 27, 30, 33 o 34</code>).
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Contacto, Teléfono o Dirección Física en Footer</th>
+                <td><span class="delta-badge delta-pos">+10 pts</span></td>
+                <td>
+                  Informa domicilio comercial verificable, teléfono de atención, WhatsApp activo, Botón de Arrepentimiento o Razón Social societaria.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Ausencia de CUIT y Data Fiscal en Tienda Local</th>
+                <td><span class="delta-badge delta-neg">-15 pts</span></td>
+                <td>
+                  La tienda ofrece carrito de compras pero omite exhibir su CUIT y su formulario F.960 (Ley 24.240 / Res. 4042-E).
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Subdominio Gratuito sin Respaldo Fiscal</th>
+                <td><span class="delta-badge delta-neg">-20 pts</span></td>
+                <td>
+                  Opera sobre un subdominio gratuito (<code>.mitiendanube.com</code>, <code>.myshopify.com</code>, <code>.empretienda.com.ar</code>) sin CUIT ni Data Fiscal.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Descuento Agresivo por Transferencia sin Respaldo Fiscal</th>
+                <td><span class="delta-badge delta-neg">-20 pts</span></td>
+                <td>
+                  Promociona descuentos extremos (25% a 80% OFF solo por transferencia bancaria o 2x1 total) sin informar identidad fiscal verificable.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Botones de Redes Sociales Vacíos o Rotos (<code>href="#"</code>)</th>
+                <td><span class="delta-badge delta-neg">-25 pts</span></td>
+                <td>
+                  Los íconos de redes sociales en el pie de página están desactivados o apuntan a la portada sin usuario real.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">FRAUDE CRÍTICO: Sello Data Fiscal Falsificado / Estático</th>
+                <td><span class="delta-badge delta-neg">-65 pts</span></td>
+                <td>
+                  Exhibe una imagen de Data Fiscal / AFIP / ARCA pegada sin enlace oficial o apuntando a una URL falsa. Dispara alerta roja inmediata.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">FRAUDE CRÍTICO: CUIT Inválido que Falla Módulo 11</th>
+                <td><span class="delta-badge delta-neg">-65 pts</span></td>
+                <td>
+                  Publica un número de CUIT inventado cuyo dígito verificador falla matemáticamente. Dispara alerta roja inmediata.
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">FRAUDE CRÍTICO: Dominio Imitador (Typosquatting / Phishing)</th>
+                <td><span class="delta-badge delta-neg">-100 pts (0/100)</span></td>
+                <td>
+                  El dominio suplanta mediante guiones, homógrafos o subdominios engañosos a una entidad bancaria, broker o comercio oficial.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ZERO-TRUST APPSEC ARCHITECTURE -->
+      <section id="arquitectura" class="page-section container" style="border-block-end: none">
+        <div class="section-intro">
+          <h2>Arquitectura Zero-Trust AppSec</h2>
           <p>
-            Elimina automáticamente más de 70 parámetros espía al copiar enlaces de MercadoLibre
-            (<code>#polycard_client</code>), Amazon (<code>tag</code>, <code>ref</code>, <code>hv*</code>), Google Ads
-            (<code>gad_*</code>) e Instagram (<code>igsh</code>).
+            Diseñado bajo estándares de ingeniería de seguridad defensiva (Blue Team) para inspeccionar sitios hostiles sin exponer tu navegador.
           </p>
-          <span class="mono-tag">Preserva ?v= y ?t= en YouTube</span>
-        </article>
+        </div>
+
+        <div class="details-stack">
+          <details class="arch-item">
+            <summary>
+              <span>Closed Shadow DOM (mode: 'closed') y Montaje Bajo Demanda</span>
+              <span aria-hidden="true">▾</span>
+            </summary>
+            <p>
+              La insignia flotante se inyecta únicamente cuando estás en una tienda online, entidad financiera o recibís una notificación de limpieza, aislada dentro de un Shadow Root cerrado (<code>mode: 'closed'</code>) con hojas de estilo compiladas en línea (<code>?inline</code>) y protección anti-sabotaje mediante <code>MutationObserver</code>.
+            </p>
+          </details>
+
+          <details class="arch-item">
+            <summary>
+              <span>Cero Sinks XSS y Truncamiento Defensivo (&lt;= 256 chars)</span>
+              <span aria-hidden="true">▾</span>
+            </summary>
+            <p>
+              El código fuente prohíbe estrictamente <code>innerHTML</code>, <code>dangerouslySetInnerHTML</code> y <code>eval()</code>. Todo texto extraído del DOM (títulos, CUITs, evidencias y dominios) filtra caracteres de control Unicode BiDi, se trunca a 256 caracteres y se renderiza como nodos de texto escapados por React.
+            </p>
+          </details>
+
+          <details class="arch-item">
+            <summary>
+              <span>Prevención de ReDoS y Tope Estricto de 150 KB</span>
+              <span aria-hidden="true">▾</span>
+            </summary>
+            <p>
+              Nunca se escanea <code>document.body.innerText</code> sin límites. Escudo Criollo extrae texto exclusivamente de contenedores semánticos con un tope máximo de <code>150 KB</code> y expresiones regulares en tiempo lineal <code>O(n)</code> para no congelar jamás el hilo principal del navegador.
+            </p>
+          </details>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div>
+          <strong>Escudo Criollo v0.2.0</strong> · Desarrollado por
+          <a href="https://raggiodev.com" target="_blank" rel="noopener noreferrer">Raggiodev (Fernando Andres Raggio)</a> ·
+          Contacto: <a href="mailto:contact@raggiodev.com">contact@raggiodev.com</a>
+        </div>
+        <div class="footer-links">
+          <a href="./demo-tienda-trucha.html">Demo Tienda Trucha</a>
+          <a href="./privacidad.html">Política de Privacidad</a>
+          <a href="https://raggiodev.com" target="_blank" rel="noopener noreferrer">raggiodev.com</a>
+          <a href="https://github.com/raggiodev" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a href="https://x.com/raggiodev" target="_blank" rel="noopener noreferrer">X (@raggiodev)</a>
+          <a href="https://www.linkedin.com/in/raggiodev/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+          <a href="https://linktr.ee/raggiodev" target="_blank" rel="noopener noreferrer">Linktree</a>
+        </div>
       </div>
-    </section>
+    </footer>
 
-    <!-- TRANSPARENT SCORING METHODOLOGY TABLE -->
-    <section id="puntaje" class="container">
-      <div class="section-header">
-        <h2>Metodología Transparente del Puntaje (0 a 100)</h2>
-        <p>
-          Cada tienda auditada muestra el desglose exacto de puntos positivos y negativos. Sin cajas negras ni
-          algoritmos ocultos.
-        </p>
-      </div>
+    <script>
+      (function () {
+        var STORE_URLS = {
+          chrome: 'https://chromewebstore.google.com/detail/escudo-criollo-by-raggiod/hlfipneanelbaghjdjbnmfiifegldkpp',
+          edge: 'https://chromewebstore.google.com/detail/escudo-criollo-by-raggiod/hlfipneanelbaghjdjbnmfiifegldkpp',
+          firefox: 'https://github.com/raggiodev/escudo-criollo'
+        };
 
-      <div tabindex="0" role="region" aria-labelledby="scoring-table-caption" class="table-wrapper">
-        <table>
-          <caption id="scoring-table-caption">
-            Tabla de ponderación heurística de confianza de Escudo Criollo v0.1.5
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">Señal / Factor Analizado</th>
-              <th scope="col">Impacto</th>
-              <th scope="col">Explicación Forense</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <th scope="row">Comercio Oficial Argentino / Evento CACE (HTTPS)</th>
-              <td><span class="delta-badge delta-pos">100 / 100</span></td>
-              <td>
-                Base oficial (+80), cifrado HTTPS (+10) y dominio oficial / respaldo F.960 verificado (+10) en cadenas
-                reconocidas y portales oficiales como <code>cybermonday.com.ar</code> y
-                <code>mercadolibre.com.ar</code>.
-              </td>
-            </tr>
-            <tr>
-              <th scope="row">Plataforma Internacional / Courier Verificado (HTTPS)</th>
-              <td><span class="delta-badge delta-pos">100 / 100</span></td>
-              <td>
-                Base plataforma internacional (+90) + conexión HTTPS (+10) para tiendas cross-border verificadas
-                (Amazon, Tiendamia, AliExpress, Steam) que operan bajo régimen de courier internacional.
-              </td>
-            </tr>
-            <tr>
-              <th scope="row">Base Inicial Comercio Online General</th>
-              <td><span class="delta-badge delta-base">+60 pts</span></td>
-              <td>
-                Punto de partida neutro para cualquier tienda online detectada (Tiendanube, Shopify, WooCommerce, VTEX,
-                PrestaShop, Magento o tienda en pesos argentinos).
-              </td>
-            </tr>
-            <tr>
-              <th scope="row">Conexión Cifrada HTTPS Activa</th>
-              <td><span class="delta-badge delta-pos">+10 pts</span></td>
-              <td>
-                El sitio cifra el tráfico mediante TLS/SSL válido. (Si usa HTTP plano sin cifrado, aplica una
-                penalización de <code>-30 pts</code>).
-              </td>
-            </tr>
-            <tr>
-              <th scope="row">Dominio Propio Registrado en NIC Argentina (<code>.com.ar</code>)</th>
-              <td><span class="delta-badge delta-pos">+15 pts</span></td>
-              <td>
-                Registrar un dominio <code>.com.ar</code> / <code>.ar</code> exige validar identidad fiscal con Clave
-                Fiscal nivel 3 ante ARCA/AFIP en NIC Argentina.
-              </td>
-            </tr>
-            <tr>
-              <th scope="row">Sello QR Data Fiscal F.960 Oficial Verificado</th>
-              <td><span class="delta-badge delta-pos">+20 pts</span></td>
-              <td>
-                El formulario F.960 enlaza activamente a <code>*.afip.gob.ar</code> o <code>*.arca.gob.ar</code> (o se
-                detecta en el estado de hidratación SPA del comercio).
-              </td>
-            </tr>
-            <tr>
-              <th scope="row">CUIT Matemáticamente Válido (Módulo 11)</th>
-              <td><span class="delta-badge delta-pos">+15 pts</span></td>
-              <td>
-                El CUIT publicado en la página supera la verificación de dígito verificador Módulo 11 y posee prefijo
-                societario o personal oficial.
-              </td>
-            </tr>
-            <tr>
-              <th scope="row">Contacto, Teléfono o Dirección Física en Footer</th>
-              <td><span class="delta-badge delta-pos">+10 pts</span></td>
-              <td>
-                Informa domicilio comercial verificable, teléfono de atención, WhatsApp activo o Razón Social societaria
-                (S.A. / S.R.L. / S.A.S.).
-              </td>
-            </tr>
-            <tr>
-              <th scope="row">Ausencia de CUIT y Data Fiscal en Tienda Local</th>
-              <td><span class="delta-badge delta-neg">-15 pts</span></td>
-              <td>
-                La tienda ofrece carrito de compras en Argentina pero omite exhibir su CUIT y su formulario F.960 (Ley
-                24.240 / Res. 4042-E).
-              </td>
-            </tr>
-            <tr>
-              <th scope="row">Subdominio Gratuito sin Respaldo Fiscal</th>
-              <td><span class="delta-badge delta-neg">-20 pts</span></td>
-              <td>
-                Opera sobre un subdominio gratuito (<code>.mitiendanube.com</code>, <code>.myshopify.com</code>,
-                <code>.empretienda.com.ar</code>) sin CUIT ni Data Fiscal.
-              </td>
-            </tr>
-            <tr>
-              <th scope="row">Descuento Agresivo por Transferencia sin Respaldo Fiscal</th>
-              <td><span class="delta-badge delta-neg">-20 pts</span></td>
-              <td>
-                Promociona descuentos extremos (25% a 80% OFF solo por transferencia bancaria o 2x1 total) sin informar
-                identidad fiscal verificable.
-              </td>
-            </tr>
-            <tr>
-              <th scope="row">Botones de Redes Sociales Vacíos o Rotos (<code>href="#"</code>)</th>
-              <td><span class="delta-badge delta-neg">-25 pts</span></td>
-              <td>
-                Los íconos de Instagram, Facebook o WhatsApp en el pie de página están desactivados o apuntan a la
-                portada sin usuario real.
-              </td>
-            </tr>
-            <tr>
-              <th scope="row">FRAUDE CRÍTICO: Sello Data Fiscal Falsificado / Estático</th>
-              <td><span class="delta-badge delta-neg">-65 pts</span></td>
-              <td>
-                Exhibe una imagen de Data Fiscal / AFIP / ARCA pegada sin enlace oficial o apuntando a una URL falsa
-                para engañar al comprador. Dispara alerta roja inmediata.
-              </td>
-            </tr>
-            <tr>
-              <th scope="row">FRAUDE CRÍTICO: CUIT Inválido que Falla Módulo 11</th>
-              <td><span class="delta-badge delta-neg">-65 pts</span></td>
-              <td>
-                Publica un número de CUIT inventado cuyo dígito verificador falla matemáticamente. Dispara alerta roja
-                inmediata.
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
+        var LABELS = {
+          chrome: 'Instalar en Google Chrome',
+          edge: 'Instalar en Microsoft Edge',
+          firefox: 'Instalar en Mozilla Firefox'
+        };
 
-    <!-- ZERO-TRUST APPSEC ARCHITECTURE -->
-    <section id="arquitectura" class="container">
-      <div class="section-header">
-        <h2>Arquitectura Zero-Trust AppSec</h2>
-        <p>
-          Diseñado bajo estándares de ingeniería de seguridad defensiva (Blue Team) para inspeccionar sitios hostiles
-          sin exponer tu navegador.
-        </p>
-      </div>
+        function detectBrowserKey() {
+          var ua = (navigator.userAgent || '').toLowerCase();
+          if (ua.indexOf('edg/') !== -1 || ua.indexOf('edga/') !== -1) {
+            return 'edge';
+          }
+          if (ua.indexOf('firefox/') !== -1 || ua.indexOf('fxios/') !== -1) {
+            return 'firefox';
+          }
+          return 'chrome';
+        }
 
-      <div class="details-stack">
-        <details class="arch-item">
-          <summary>
-            <span>🔒 Closed Shadow DOM (mode: 'closed') y Montaje Bajo Demanda</span>
-            <span aria-hidden="true">▾</span>
-          </summary>
-          <p>
-            La insignia flotante se inyecta únicamente cuando estás en una tienda online o recibís una notificación de
-            limpieza, aislada dentro de un Shadow Root cerrado (<code>mode: 'closed'</code>) con hojas de estilo
-            compiladas en línea (<code>?inline</code>) y protección anti-sabotaje mediante
-            <code>MutationObserver</code>.
-          </p>
-        </details>
+        document.addEventListener('DOMContentLoaded', function () {
+          var detected = detectBrowserKey();
+          var heroBtn = document.getElementById('hero-install-btn');
+          var heroLabel = document.getElementById('hero-install-label');
 
-        <details class="arch-item">
-          <summary>
-            <span>🛡️ Cero Sinks XSS y Truncamiento Defensivo (&lt;= 256 chars)</span>
-            <span aria-hidden="true">▾</span>
-          </summary>
-          <p>
-            El código fuente prohíbe estrictamente <code>innerHTML</code>, <code>dangerouslySetInnerHTML</code> y
-            <code>eval()</code>. Todo texto extraído del DOM (títulos, CUITs, evidencias y dominios) filtra caracteres
-            de control Unicode BiDi, se trunca a 256 caracteres y se renderiza como nodos de texto escapados por React.
-          </p>
-        </details>
+          if (heroBtn && STORE_URLS[detected]) {
+            heroBtn.setAttribute('href', STORE_URLS[detected]);
+          }
+          if (heroLabel && LABELS[detected]) {
+            heroLabel.textContent = LABELS[detected];
+          }
 
-        <details class="arch-item">
-          <summary>
-            <span>⚡ Prevención de ReDoS y Tope Estricto de 150 KB</span>
-            <span aria-hidden="true">▾</span>
-          </summary>
-          <p>
-            Nunca se escanea <code>document.body.innerText</code> sin límites. Escudo Criollo extrae texto
-            exclusivamente de contenedores semánticos con un tope máximo de <code>150 KB</code> y expresiones regulares
-            en tiempo lineal <code>O(n)</code> para no congelar jamás el hilo principal del navegador.
-          </p>
-        </details>
-      </div>
-    </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="container footer-inner">
-      <div>
-        <strong>🛡️ Escudo Criollo v0.1.5</strong> · Desarrollado en Argentina por
-        <a href="https://raggiodev.com" target="_blank" rel="noopener noreferrer">Fernando Andres Raggio (Raggiodev)</a>
-        ·
-        Contacto: <a href="mailto:contact@raggiodev.com">contact@raggiodev.com</a>
-      </div>
-      <div class="footer-links">
-        <a href="./demo-tienda-trucha.html">Demo Tienda Trucha</a>
-        <a href="./privacidad.html">Política de Privacidad</a>
-        <a href="https://raggiodev.com" target="_blank" rel="noopener noreferrer">
-          raggiodev.com
-        </a>
-        <a href="https://github.com/raggiodev" target="_blank" rel="noopener noreferrer">
-          GitHub
-        </a>
-        <a href="https://x.com/raggiodev" target="_blank" rel="noopener noreferrer">
-          X (@raggiodev)
-        </a>
-        <a href="https://www.linkedin.com/in/raggiodev/" target="_blank" rel="noopener noreferrer">
-          LinkedIn
-        </a>
-        <a href="https://linktr.ee/raggiodev" target="_blank" rel="noopener noreferrer">
-          Linktree
-        </a>
-      </div>
-    </div>
-  </footer>
-</body>
-
+          var panels = document.querySelectorAll('.store-panel[data-browser]');
+          for (var i = 0; i < panels.length; i++) {
+            var panel = panels[i];
+            if (panel.getAttribute('data-browser') === detected) {
+              panel.classList.add('detected-browser');
+            } else {
+              panel.classList.remove('detected-browser');
+            }
+          }
+        });
+      })();
+    </script>
+  </body>
 </html>

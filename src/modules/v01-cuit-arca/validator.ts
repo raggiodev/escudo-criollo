@@ -1,3 +1,5 @@
+import { OFFICIAL_CUIT_PREFIXES } from '../../config/scoring-config';
+import registriesData from '../../data/verified-registries.json';
 import {
   CuitEntityType,
   CuitValidationResult,
@@ -15,17 +17,7 @@ import {
   isImageElement,
 } from '../../utils/dom-safety';
 
-const VALID_CUIT_PREFIXES = new Set([
-  '20',
-  '23',
-  '24',
-  '25',
-  '26',
-  '27',
-  '30',
-  '33',
-  '34',
-]);
+const VALID_CUIT_PREFIXES = new Set<string>(OFFICIAL_CUIT_PREFIXES);
 
 const MODULO_11_WEIGHTS = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2] as const;
 
@@ -445,36 +437,8 @@ function scanHydrationPayloadsForOfficialQr(doc: Document): string | null {
   return null;
 }
 
-export const NON_ECOMMERCE_PLATFORMS = [
-  'github.com',
-  'gitlab.com',
-  'bitbucket.org',
-  'stackoverflow.com',
-  'google.com',
-  'google.com.ar',
-  'youtube.com',
-  'youtu.be',
-  'x.com',
-  'twitter.com',
-  'linkedin.com',
-  'reddit.com',
-  'wikipedia.org',
-  'medium.com',
-  'substack.com',
-  'orcid.org',
-  'linktr.ee',
-  'discord.com',
-  'whatsapp.com',
-  'telegram.org',
-  't.me',
-  'gmail.com',
-  'outlook.com',
-  'live.com',
-  'chatgpt.com',
-  'openai.com',
-  'gemini.google.com',
-  'claude.ai',
-] as const;
+export const NON_ECOMMERCE_PLATFORMS: readonly string[] =
+  registriesData.nonEcommerceExclusions;
 
 export function isNonEcommercePlatformHost(hostname: string): boolean {
   if (!hostname) {

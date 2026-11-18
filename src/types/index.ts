@@ -58,6 +58,8 @@ export type EcommercePlatform =
   | 'WOOCOMMERCE'
   | 'MERCADOLIBRE'
   | 'MERCADOSHOPS'
+  | 'MARKETPLACE_OFICIAL'
+  | 'ENTIDAD_FINANCIERA'
   | 'VTEX'
   | 'PRESTASHOP'
   | 'MAGENTO'

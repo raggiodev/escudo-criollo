@@ -164,6 +164,7 @@ export default defineContentScript({
 
       if (
         currentReport.ecommerce.platform === 'ECOMMERCE_INTERNACIONAL' ||
+        currentReport.ecommerce.platform === 'ENTIDAD_FINANCIERA' ||
         currentReport.ecommerce.platform === 'RAGGIODEV_HQ' ||
         currentReport.riskLevel === 'DANGER'
       ) {

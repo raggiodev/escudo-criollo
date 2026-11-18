@@ -1,4 +1,10 @@
 import {
+  LEGAL_AUDIT_DISCLAIMER,
+  SCORE_CAPS,
+  SCORING_WEIGHTS,
+} from '../../config/scoring-config';
+import registriesData from '../../data/verified-registries.json';
+import {
   AuditFinding,
   DataFiscalAuditResult,
   EcommerceContext,
@@ -23,290 +29,46 @@ import {
   inspectDataFiscalDOM,
   isNonEcommercePlatformHost,
 } from '../v01-cuit-arca/validator';
+import {
+  TyposquattingMatch,
+  detectBrandTyposquatting,
+  hasSuspiciousUrlUserinfo,
+  matchesAnyRegisteredDomain,
+  matchesRegisteredDomain,
+} from './domain-matcher';
 
-export { NON_ECOMMERCE_PLATFORMS, isNonEcommercePlatformHost };
+export {
+  NON_ECOMMERCE_PLATFORMS,
+  isNonEcommercePlatformHost,
+  LEGAL_AUDIT_DISCLAIMER,
+  detectBrandTyposquatting,
+  matchesRegisteredDomain,
+};
 
-// Official CACE Shopping Events & Chamber Portals (isEcommerce: true, 100/100 SAFE)
-const VERIFIED_CACE_EVENT_DOMAINS = [
-  'cybermonday.com.ar',
-  'hotsale.com.ar',
-  'cace.org.ar',
-] as const;
+export const VERIFIED_CACE_EVENT_DOMAINS: readonly string[] =
+  registriesData.caceOfficialEvents;
 
-// Verified National Argentine Retailers, Marketplaces, CyberMonday CACE Brands & Tech Stores (isEcommerce: true, 100/100 SAFE)
-export const VERIFIED_ARGENTINE_RETAILERS = [
-  // Marketplaces & CACE Events
-  'mercadolibre.com.ar',
-  'mercadolibre.com',
-  'mercadopago.com.ar',
-  'mercadoshops.com.ar',
-  'shopee.com.ar',
-  'cybermonday.com.ar',
-  'hotsale.com.ar',
-  'cace.org.ar',
+export const VERIFIED_FINANCIAL_ENTITIES: readonly string[] =
+  registriesData.financialAndBrokersAr;
 
-  // Salud y Belleza
-  'farmacity.com',
-  'farmacity.com.ar',
-  'simplicity.com.ar',
-  'getthelook.com.ar',
-  'juleriaque.com.ar',
-  'farmaonline.com',
-  'parfumerie.com.ar',
-  'openfarma.com.ar',
-  'pigmento.com.ar',
-  'rouje.com.ar',
-  'masfarmacias.com',
-  'farmaciaslider.com.ar',
-  'farmacialeloir.com.ar',
+export const VERIFIED_MARKETPLACES: readonly string[] =
+  registriesData.marketplacesAr;
 
-  // Muebles, Hogar y Colchonería
-  'easy.com.ar',
-  'cencosud.com.ar',
-  'naldo.com.ar',
-  'sommiercenter.com',
-  'arredo.com.ar',
-  'sodimac.com.ar',
-  'perozzi.com.ar',
-  'perozzihogar.com.ar',
-  'belmo.com.ar',
-  'bedtime.com.ar',
-  'simmons.com.ar',
-  'tiendaslandmark.com.ar',
-  'landmark.com.ar',
-  'suenodorado.com.ar',
-  'calmessimple.com.ar',
-  'laespumeria.com.ar',
-  'piero.com.ar',
-  'rosen.com.ar',
-  'cannonhome.com.ar',
-  'morph.com.ar',
-  'bazarchef.com.ar',
+export const VERIFIED_DIRECT_RETAILERS_AR: readonly string[] =
+  registriesData.retailersAr;
 
-  // Viajes, Turismo y Asistencia al Viajero
-  'goassistance.com',
-  'goassistance.com.ar',
-  'assistcard.com',
-  'almundo.com.ar',
-  'aeropuertosargentina.com',
-  'aa2000.com.ar',
-  'deturista.com',
-  'universal-assistance.com',
-  'coris.com.ar',
-  'axa-assistance.com.ar',
-  'iberia.com',
-  'coloniaexpress.com',
-  'buquebus.com',
-  'aerolineas.com.ar',
-  'flybondi.com',
-  'jetsmart.com',
-  'latamairlines.com',
-  'despegar.com.ar',
-  'turismocity.com.ar',
-  'avantrip.com',
-  'atrapalo.com.ar',
-  'plataforma10.com.ar',
-  'centraldepasajes.com.ar',
+// Unified national verified retailers export (CACE + Marketplaces + Direct Retailers)
+export const VERIFIED_ARGENTINE_RETAILERS: readonly string[] = [
+  ...registriesData.caceOfficialEvents,
+  ...registriesData.marketplacesAr,
+  ...registriesData.retailersAr,
+];
 
-  // Supermercados, Bodegas y Gastronomía
-  'jumbo.com.ar',
-  'carrefour.com.ar',
-  'disco.com.ar',
-  'vea.com.ar',
-  'coca-cola.com.ar',
-  'coto.com.ar',
-  'cotodigital.com.ar',
-  'cotodigital3.com.ar',
-  'diaonline.supermercadosdia.com.ar',
-  'supermercadosdia.com.ar',
-  'masonline.com.ar',
-  'laanonimaonline.com',
-  'hiperlibertad.com.ar',
-  'craftsociety.com.ar',
-  'bonvivir.com',
-  'siempreencasa.com.ar',
-  'taura.com.ar',
-  'arcorencasa.com',
-  'havanna.com.ar',
-  'cafemartinez.com',
-  'gridohelado.com',
-  'nespresso.com',
+export const VERIFIED_INTERNATIONAL_PLATFORMS: readonly string[] =
+  registriesData.internationalPlatforms;
 
-  // Indumentaria, Calzado y Bebés
-  'moov.com.ar',
-  'ovb.com.ar',
-  'coppel.com.ar',
-  'dexter.com.ar',
-  'stockcenter.com.ar',
-  'mimo.com.ar',
-  'cheeky.com.ar',
-  'grisino.com',
-  'wanama.com',
-  'kosiuko.com',
-  'jazminchebar.com.ar',
-  'rapsodia.com.ar',
-  'prune.com.ar',
-  'xl.com.ar',
-  'todomoda.com',
-  'isadoraonline.com',
-  'montagne.com.ar',
-  'ansilta.com',
-  'equus.com.ar',
-  'macowens.com.ar',
-  'devre.la',
-  'cardon.com.ar',
-  'kevingston.com',
-  'lacoste.com',
-  'topper.com.ar',
-  'fila.com.ar',
-  'umbro.com.ar',
-  'reebok.com.ar',
-  'underarmour.com.ar',
-  'newbalance.com.ar',
-  'vans.com.ar',
-  'converse.com.ar',
-  'grimoldi.com',
-  'paruolo.com.ar',
-  'rickysarkany.com',
-  'ver.com.ar',
-  '47street.com.ar',
-  'portsaid.com.ar',
-  'desiderata.com.ar',
-  'markova.com',
-  'solodeportes.com.ar',
-  'grid.com.ar',
-  'sportline.com.ar',
-  'dash.com.ar',
-  'adidas.com.ar',
-  'nike.com.ar',
-  'puma.com',
-  'levi.com.ar',
-  'zara.com',
-  'dafiti.com.ar',
-
-  // Electro y Tecnología
-  'gadnic.com.ar',
-  'bidcom.com.ar',
-  'novogar.com.ar',
-  'espacioelectronica.com',
-  'casadelaudio.com',
-  'pardo.com.ar',
-  'hendel.com',
-  'cetrogar.com.ar',
-  'fravega.com',
-  'fravega.com.ar',
-  'musimundo.com',
-  'musimundo.com.ar',
-  'megatone.net',
-  'oncity.com',
-  'compragamer.com',
-  'maximus.com.ar',
-  'venex.com.ar',
-  'fullh4rd.com.ar',
-  'mexx.com.ar',
-  'gezatek.com.ar',
-  'logg.com.ar',
-  'start.com.ar',
-  'diggit.com.ar',
-  'stylestore.com.ar',
-  'macstation.com.ar',
-  'ipoint.com.ar',
-  'oneclickstore.com',
-  'samsung.com',
-  'motorola.com.ar',
-  'lg.com',
-  'sony.com.ar',
-  'philco.com.ar',
-  'noblex.com.ar',
-  'atma.com.ar',
-  'bgh.com.ar',
-  'drean.com.ar',
-  'whirlpool.com.ar',
-  'electrolux.com.ar',
-  'peabody.com.ar',
-  'liliana.com.ar',
-  'osterargentina.com',
-  'philips.com.ar',
-  'personal.com.ar',
-  'tiendapersonal.com.ar',
-  'claro.com.ar',
-  'tienda.claro.com.ar',
-  'movistar.com.ar',
-  'tienda.movistar.com.ar',
-  'yenny-elateneo.com',
-  'cuspide.com',
-] as const;
-
-const VERIFIED_ARGENTINE_ECOMMERCE_DOMAINS = VERIFIED_ARGENTINE_RETAILERS;
-
-// Verified International E-Commerce & Cross-Border Courier Platforms (isEcommerce: true, 100/100 SAFE)
-export const VERIFIED_INTERNATIONAL_PLATFORMS = [
-  'amazon.com',
-  'amazon.es',
-  'amazon.com.br',
-  'amazon.com.mx',
-  'amazon.co.uk',
-  'tiendamia.com',
-  'tiendamia.com.ar',
-  'aliexpress.com',
-  'ebay.com',
-  'buscalibre.com.ar',
-  'buscalibre.com',
-  'shein.com',
-  'shein.com.ar',
-  'temu.com',
-  'shopee.com',
-  'shopee.com.br',
-  'shopee.cl',
-  'shopee.com.mx',
-  'shopee.com.co',
-  'steampowered.com',
-  'playstation.com',
-  'xbox.com',
-  'nintendo.com',
-  'apple.com',
-  'booking.com',
-  'airbnb.com',
-  'airbnb.com.ar',
-] as const;
-
-const VERIFIED_INTERNATIONAL_ECOMMERCE_DOMAINS = VERIFIED_INTERNATIONAL_PLATFORMS;
-
-// Verified Non-Store Government, Financial & University Institutions (100/100 SAFE)
-export const VERIFIED_OFFICIAL_INSTITUTIONS = [
-  'afip.gob.ar',
-  'arca.gob.ar',
-  'bcra.gob.ar',
-  'argentina.gob.ar',
-  'anses.gob.ar',
-  'nic.ar',
-  'bna.com.ar',
-  'galicia.ar',
-  'bancogalicia.com.ar',
-  'santander.com.ar',
-  'bbva.com.ar',
-  'macro.com.ar',
-  'icbc.com.ar',
-  'bancoprovincia.com.ar',
-  'bancociudad.com.ar',
-  'brubank.com',
-  'uala.com.ar',
-  'naranjax.com',
-  'palermo.edu',
-  'uba.ar',
-  'utn.edu.ar',
-  'uade.edu.ar',
-  'itba.edu.ar',
-  'ucema.edu.ar',
-  'uca.edu.ar',
-  'austral.edu.ar',
-  'siglo21.edu.ar',
-  'kennedy.edu.ar',
-  'orted.edu.ar',
-  'ort.edu.ar',
-] as const;
-
-const VERIFIED_INSTITUTIONAL_DOMAINS = VERIFIED_OFFICIAL_INSTITUTIONS;
+export const VERIFIED_OFFICIAL_INSTITUTIONS: readonly string[] =
+  registriesData.officialInstitutionsAr;
 
 const FREE_SUBDOMAIN_SUFFIXES = [
   '.mitiendanube.com',
@@ -373,13 +135,9 @@ const SOCIAL_DOMAINS = [
   'api.whatsapp.com',
 ] as const;
 
-function matchesDomainOrSubdomain(hostname: string, target: string): boolean {
-  return hostname === target || hostname.endsWith(`.${target}`);
-}
-
 /**
  * Detects whether a URL belongs to any official portfolio, repository, academic profile,
- * or social channel of Escudo Criollo's creator: Fernando Andres Raggio (Raggiodev).
+ * or social channel of Escudo Criollo's creator: Raggiodev (Fernando Andres Raggio).
  */
 export function isRaggiodevCreatorUrl(rawUrl: string): boolean {
   const parsed = parseSafeHttpUrl(rawUrl);
@@ -445,30 +203,23 @@ function isRaggiodevCreatorHq(parsedUrl: URL | null): boolean {
 }
 
 function isVerifiedCaceEventHost(hostname: string): boolean {
-  if (!hostname) {
-    return false;
-  }
-  return VERIFIED_CACE_EVENT_DOMAINS.some((domain) =>
-    matchesDomainOrSubdomain(hostname, domain),
-  );
+  return matchesAnyRegisteredDomain(hostname, VERIFIED_CACE_EVENT_DOMAINS);
+}
+
+function isVerifiedFinancialHost(hostname: string): boolean {
+  return matchesAnyRegisteredDomain(hostname, VERIFIED_FINANCIAL_ENTITIES);
+}
+
+function isVerifiedMarketplaceHost(hostname: string): boolean {
+  return matchesAnyRegisteredDomain(hostname, VERIFIED_MARKETPLACES);
 }
 
 function isVerifiedArgentineStoreHost(hostname: string): boolean {
-  if (!hostname) {
-    return false;
-  }
-  return VERIFIED_ARGENTINE_ECOMMERCE_DOMAINS.some((domain) =>
-    matchesDomainOrSubdomain(hostname, domain),
-  );
+  return matchesAnyRegisteredDomain(hostname, VERIFIED_DIRECT_RETAILERS_AR);
 }
 
 function isVerifiedInternationalStoreHost(hostname: string): boolean {
-  if (!hostname) {
-    return false;
-  }
-  return VERIFIED_INTERNATIONAL_ECOMMERCE_DOMAINS.some((domain) =>
-    matchesDomainOrSubdomain(hostname, domain),
-  );
+  return matchesAnyRegisteredDomain(hostname, VERIFIED_INTERNATIONAL_PLATFORMS);
 }
 
 function isVerifiedInstitutionalHost(hostname: string): boolean {
@@ -483,18 +234,19 @@ function isVerifiedInstitutionalHost(hostname: string): boolean {
   ) {
     return true;
   }
-  return VERIFIED_INSTITUTIONAL_DOMAINS.some((domain) =>
-    matchesDomainOrSubdomain(hostname, domain),
-  );
+  return matchesAnyRegisteredDomain(hostname, VERIFIED_OFFICIAL_INSTITUTIONS);
 }
 
 function isFreeStoreSubdomain(hostname: string): boolean {
   return FREE_SUBDOMAIN_SUFFIXES.some((suffix) => hostname.endsWith(suffix));
 }
 
-function clampScoreFromBreakdown(items: readonly ScoreBreakdownItem[]): number {
+function clampScoreFromBreakdown(
+  items: readonly ScoreBreakdownItem[],
+  maxCap: number = SCORE_CAPS.MAX_OFFICIAL_SCORE,
+): number {
   const rawTotal = items.reduce((acc, item) => acc + item.delta, 0);
-  return Math.max(0, Math.min(100, Math.round(rawTotal)));
+  return Math.max(0, Math.min(maxCap, Math.round(rawTotal)));
 }
 
 /**
@@ -625,15 +377,14 @@ function collectDomFingerprints(doc: Document): {
 }
 
 /**
- * Identifies whether the current document is an online store or shopping platform,
- * recognizing verified Argentine retailers (CompraGamer, Cetrogar, MercadoLibre, etc.),
- * verified international/courier retailers (Amazon, Tiendamia, etc.), major CMS engines,
- * and Argentine stores with Data Fiscal F.960 or cart/ARS pricing signals.
+ * Identifies whether the current document is an online store, marketplace, financial/broker platform,
+ * or general website, using externalized verified registries and anti-typosquatting checks.
  */
 export function detectEcommerceContext(
   doc: Document,
   urlStr: string,
   precomputedDataFiscal?: DataFiscalAuditResult,
+  precomputedTyposquat?: TyposquattingMatch | null,
 ): EcommerceContext {
   const parsedUrl = getSafeDocumentUrl(doc, urlStr);
   const isFileDemoScamStore =
@@ -647,7 +398,7 @@ export function detectEcommerceContext(
         : '';
   const isFreeSubdomain = isFreeStoreSubdomain(hostname);
 
-  // 0. Raggiodev Creator Easter Egg (all official portfolios, repositories, and social channels of Fernando Andres Raggio)
+  // 0. Raggiodev Creator Easter Egg (all official portfolios, repositories, and social channels of Raggiodev)
   if (isRaggiodevCreatorHq(parsedUrl)) {
     return {
       isEcommerce: true,
@@ -660,7 +411,24 @@ export function detectEcommerceContext(
     };
   }
 
-  // 0b. Non-Ecommerce Platforms (GitHub, GitLab, Google, YouTube, X, LinkedIn, ORCID, Linktree, Substack, AI chats, etc.)
+  // 0b. Phishing / Typosquatting / Userinfo Credential Spoofing
+  const typosquat =
+    precomputedTyposquat !== undefined
+      ? precomputedTyposquat
+      : detectBrandTyposquatting(hostname);
+  if (hasSuspiciousUrlUserinfo(parsedUrl) || typosquat !== null) {
+    return {
+      isEcommerce: true,
+      isWhitelistedOfficial: false,
+      platform: 'TIENDA_ARGENTINA',
+      platformLabel: 'Dominio Imitador',
+      isFreeSubdomain,
+      hasArsPricing: false,
+      hasCartControls: false,
+    };
+  }
+
+  // 0c. Non-Ecommerce Platforms (GitHub, Google, YouTube, X, LinkedIn, News Portals, Steamcito, Impuestito, etc.)
   if (isNonEcommercePlatformHost(hostname)) {
     return {
       isEcommerce: false,
@@ -673,35 +441,7 @@ export function detectEcommerceContext(
     };
   }
 
-  // 1. MercadoLibre & MercadoShops Official
-  if (
-    matchesDomainOrSubdomain(hostname, 'mercadolibre.com.ar') ||
-    matchesDomainOrSubdomain(hostname, 'mercadolibre.com')
-  ) {
-    return {
-      isEcommerce: true,
-      isWhitelistedOfficial: true,
-      platform: 'MERCADOLIBRE',
-      platformLabel: 'MercadoLibre Oficial',
-      isFreeSubdomain: false,
-      hasArsPricing: true,
-      hasCartControls: true,
-    };
-  }
-
-  if (matchesDomainOrSubdomain(hostname, 'mercadoshops.com.ar')) {
-    return {
-      isEcommerce: true,
-      isWhitelistedOfficial: true,
-      platform: 'MERCADOSHOPS',
-      platformLabel: 'MercadoShops Oficial',
-      isFreeSubdomain: false,
-      hasArsPricing: true,
-      hasCartControls: true,
-    };
-  }
-
-  // 2. Official CACE Event Portals (CyberMonday, Hot Sale, CACE)
+  // 1. Official CACE Event Portals (CyberMonday, Hot Sale, CACE)
   if (isVerifiedCaceEventHost(hostname)) {
     return {
       isEcommerce: true,
@@ -714,7 +454,33 @@ export function detectEcommerceContext(
     };
   }
 
-  // 3. Verified National Argentine Retailers (CompraGamer, Cetrogar, Frávega, Supermercados, etc.)
+  // 2. Regulated Financial Entities, Banks & Brokers (ALyCs / CNV / BCRA — e.g. InvertirOnline, Galicia, BNA)
+  if (isVerifiedFinancialHost(hostname)) {
+    return {
+      isEcommerce: true,
+      isWhitelistedOfficial: true,
+      platform: 'ENTIDAD_FINANCIERA',
+      platformLabel: 'Entidad Financiera Oficial',
+      isFreeSubdomain: false,
+      hasArsPricing: true,
+      hasCartControls: false,
+    };
+  }
+
+  // 3. Official Marketplaces where Third-Party Sellers Operate (MercadoLibre, Shopee AR, Frávega, etc.)
+  if (isVerifiedMarketplaceHost(hostname)) {
+    return {
+      isEcommerce: true,
+      isWhitelistedOfficial: true,
+      platform: 'MARKETPLACE_OFICIAL',
+      platformLabel: 'Marketplace Oficial',
+      isFreeSubdomain: false,
+      hasArsPricing: true,
+      hasCartControls: true,
+    };
+  }
+
+  // 4. Verified National Direct Argentine Retailers (CompraGamer, Cetrogar, Easy, Farmacity, etc.)
   if (isVerifiedArgentineStoreHost(hostname)) {
     return {
       isEcommerce: true,
@@ -727,7 +493,7 @@ export function detectEcommerceContext(
     };
   }
 
-  // 3. Verified International & Cross-Border Courier Platforms (Amazon, Tiendamia, Steam, etc.)
+  // 5. Verified International & Cross-Border Courier Platforms (Amazon, Tiendamia, Steam, etc.)
   if (isVerifiedInternationalStoreHost(hostname)) {
     return {
       isEcommerce: true,
@@ -740,7 +506,7 @@ export function detectEcommerceContext(
     };
   }
 
-  // 4. Verified Government (.gob.ar) & Official Banks
+  // 6. Verified Government (.gob.ar) & Universities (.edu.ar / palermo.edu / uba.ar)
   if (isVerifiedInstitutionalHost(hostname)) {
     return {
       isEcommerce: false,
@@ -874,9 +640,11 @@ export function detectEcommerceContext(
     precomputedDataFiscal ??
     inspectDataFiscalDOM(doc, parsedUrl ? parsedUrl.href : urlStr);
 
+  // Unknown domain: require actual cart/buy controls (or a forged tax seal) to classify as an e-commerce store.
+  // Merely having '$' numbers in text without cart controls classifies as NO_ECOMMERCE.
   if (
-    (hasCartControls && hasArsPricing) ||
-    dataFiscal.status === 'VERIFIED_OFFICIAL_QR' ||
+    (hasCartControls &&
+      (hasArsPricing || dataFiscal.status === 'VERIFIED_OFFICIAL_QR')) ||
     dataFiscal.status === 'FORGED_STATIC_SEAL'
   ) {
     return {
@@ -987,7 +755,7 @@ function inspectFooterSocialLinks(
 
         const host = parsed.hostname.toLowerCase();
         const isSocialHost = SOCIAL_DOMAINS.some((d) =>
-          matchesDomainOrSubdomain(host, d),
+          matchesRegisteredDomain(host, d),
         );
 
         if (isSocialHost) {
@@ -1011,8 +779,8 @@ function inspectFooterSocialLinks(
 
 /**
  * Full security & anti-scam forensic audit combining Modulo 11 CUIT inspection,
- * ARCA/AFIP F.960 Data Fiscal DOM & SPA hydration verification, national/international
- * verified store registries, and transparent scoreBreakdown accounting.
+ * ARCA/AFIP F.960 Data Fiscal DOM & SPA hydration verification, national/international/financial
+ * verified registries, anti-typosquatting checks, and transparent scoreBreakdown accounting.
  */
 export function auditStoreSecurity(
   doc: Document,
@@ -1042,8 +810,15 @@ export function auditStoreSecurity(
     256,
   );
 
+  const typosquatMatch = detectBrandTyposquatting(hostname);
+  const hasUserinfoSpoof = hasSuspiciousUrlUserinfo(parsedUrl);
   const dataFiscal = inspectDataFiscalDOM(doc, safeUrl);
-  const ecommerce = detectEcommerceContext(doc, safeUrl, dataFiscal);
+  const ecommerce = detectEcommerceContext(
+    doc,
+    safeUrl,
+    dataFiscal,
+    typosquatMatch,
+  );
 
   // Bounded semantic text extraction (strictly <= 150,000 chars total)
   const footerText = extractBoundedSemanticText(doc, FOOTER_SELECTORS, 60_000);
@@ -1082,7 +857,7 @@ export function auditStoreSecurity(
         type: 'base',
       },
       {
-        label: '✨ Sello Oficial Fernando Andres Raggio (Raggiodev)',
+        label: '✨ Sello Oficial Raggiodev',
         delta: 10,
         type: 'positive',
       },
@@ -1093,9 +868,9 @@ export function auditStoreSecurity(
       severity: 'SAFE',
       title: '🟢 ¡Easter Egg encontrado! · Perfil Oficial del Creador',
       detail:
-        '¡Encontraste un secreto oculto de Escudo Criollo! Estás visitando una web o red oficial de su creador: Fernando Andres Raggio (Raggiodev). Nota: este puntaje es un guiño humorístico y de color para la comunidad 😉.',
+        '¡Encontraste un secreto oculto de Escudo Criollo! Estás visitando una web o red oficial de su creador: Raggiodev. Nota: este puntaje es un guiño humorístico y de color para la comunidad 😉.',
       evidence:
-        'Easter Egg Desbloqueado · Desarrollado por Fernando Andres Raggio (Raggiodev)',
+        'Easter Egg Desbloqueado · Desarrollado por Raggiodev',
     });
 
     return {
@@ -1116,18 +891,213 @@ export function auditStoreSecurity(
   }
 
   // =========================================================================
-  // BRANCH A: VERIFIED INTERNATIONAL & CROSS-BORDER COURIER PLATFORMS (100/100)
+  // BRANCH 0B: ANTI-TYPOSQUATTING & URL CREDENTIAL SPOOFING (0/100 DANGER)
   // =========================================================================
-  if (ecommerce.platform === 'ECOMMERCE_INTERNACIONAL') {
+  if (typosquatMatch !== null || hasUserinfoSpoof) {
+    scoreBreakdown.push(
+      {
+        label: 'Base inicial comercio auditado',
+        delta: SCORING_WEIGHTS.HEURISTIC_ECOMMERCE_BASE,
+        type: 'base',
+      },
+      {
+        label:
+          'FRAUDE CRÍTICO: Dominio imitador (Typosquatting / Phishing)',
+        delta: SCORING_WEIGHTS.CRITICAL_TYPOSQUATTING_PENALTY,
+        type: 'negative',
+      },
+    );
+
+    findings.push({
+      id: 'typosquatting-brand-impersonation',
+      severity: 'DANGER',
+      title: 'Alerta de Phishing: Dominio imitador detectado',
+      detail: typosquatMatch
+        ? `Este sitio (${hostname}) imita de forma engañosa a la marca oficial ${typosquatMatch.targetBrand} (${typosquatMatch.officialDomain}). No ingreses claves, tarjetas ni realices transferencias.`
+        : 'La dirección URL contiene credenciales engañosas (@) para simular otro dominio oficial. Posible ataque de phishing.',
+      evidence: typosquatMatch ? typosquatMatch.evidence : safeUrl,
+    });
+
+    return {
+      url: safeUrl,
+      hostname,
+      pageTitle,
+      isHttps,
+      timestamp: Date.now(),
+      ecommerce,
+      trustScore: 0,
+      scoreBreakdown,
+      riskLevel: 'DANGER',
+      pillHeadline: 'Alerta: Dominio Imitador (Posible Phishing)',
+      cuits,
+      dataFiscal,
+      findings,
+    };
+  }
+
+  // =========================================================================
+  // BRANCH A1: REGULATED FINANCIAL ENTITIES, BROKERS (ALyC) & BANKS (100/100)
+  // =========================================================================
+  if (ecommerce.platform === 'ENTIDAD_FINANCIERA') {
     scoreBreakdown.push({
-      label: 'Base Plataforma Internacional Reconocida',
-      delta: 90,
+      label: 'Base Entidad Financiera / Broker Regulado',
+      delta: SCORING_WEIGHTS.VERIFIED_FINANCIAL_BASE,
       type: 'base',
     });
     if (isHttps) {
       scoreBreakdown.push({
         label: 'Conexión cifrada HTTPS',
-        delta: 10,
+        delta: SCORING_WEIGHTS.HTTPS_BONUS,
+        type: 'positive',
+      });
+    } else {
+      scoreBreakdown.push({
+        label: 'Conexión sin cifrado HTTPS',
+        delta: -25,
+        type: 'negative',
+      });
+    }
+    scoreBreakdown.push({
+      label: 'Dominio institucional verificado',
+      delta: SCORING_WEIGHTS.VERIFIED_FINANCIAL_DOMAIN_BONUS,
+      type: 'positive',
+    });
+
+    findings.push({
+      id: 'verified-financial-broker-entity',
+      severity: 'SAFE',
+      title: 'Entidad financiera, broker (ALyC) o billetera oficial',
+      detail:
+        'Entidad financiera, broker (ALyC) o billetera regulada en su dominio auténtico. Verificá siempre en la barra del navegador que el dominio sea exacto antes de ingresar tus credenciales.',
+      evidence: hostname,
+    });
+
+    if (validCuits.length > 0) {
+      findings.push({
+        id: 'valid-cuit-present',
+        severity: 'SAFE',
+        title: 'CUIT institucional verificado (Módulo 11)',
+        detail:
+          'El CUIT informado cumple con la validación matemática y prefijo oficial de ARCA/AFIP.',
+        evidence: validCuits
+          .slice(0, 2)
+          .map((c) => c.formatted)
+          .join(' · '),
+      });
+    }
+
+    const trustScore = clampScoreFromBreakdown(scoreBreakdown);
+    return {
+      url: safeUrl,
+      hostname,
+      pageTitle,
+      isHttps,
+      timestamp: Date.now(),
+      ecommerce,
+      trustScore,
+      scoreBreakdown,
+      riskLevel: isHttps ? 'SAFE' : 'WARNING',
+      pillHeadline: isHttps
+        ? 'Entidad Financiera Oficial'
+        : 'Precaución · Sitio sin HTTPS',
+      cuits,
+      dataFiscal,
+      findings,
+    };
+  }
+
+  // =========================================================================
+  // BRANCH A2: OFFICIAL MARKETPLACES WITH THIRD-PARTY SELLER ADVISORY (100/100)
+  // =========================================================================
+  if (ecommerce.platform === 'MARKETPLACE_OFICIAL') {
+    scoreBreakdown.push({
+      label: 'Base Marketplace Oficial Reconocido',
+      delta: SCORING_WEIGHTS.VERIFIED_OFFICIAL_BASE,
+      type: 'base',
+    });
+    if (isHttps) {
+      scoreBreakdown.push({
+        label: 'Conexión cifrada HTTPS',
+        delta: SCORING_WEIGHTS.HTTPS_BONUS,
+        type: 'positive',
+      });
+    } else {
+      scoreBreakdown.push({
+        label: 'Conexión sin cifrado HTTPS',
+        delta: -25,
+        type: 'negative',
+      });
+    }
+    scoreBreakdown.push({
+      label: 'Dominio oficial verificado',
+      delta: 10,
+      type: 'positive',
+    });
+
+    findings.push(
+      {
+        id: 'whitelisted-official-marketplace',
+        severity: 'SAFE',
+        title: 'Plataforma de comercio electrónico oficial',
+        detail: 'Plataforma de comercio electrónico auténtica y verificada.',
+        evidence: hostname,
+      },
+      {
+        id: 'marketplace-third-party-seller-advisory',
+        severity: 'SAFE',
+        title: 'Atención: Verificá al vendedor individual',
+        detail:
+          'Atención en Marketplaces: dentro de esta plataforma operan vendedores externos. Revisá siempre la antigüedad, calificaciones y reputación del vendedor individual antes de comprar.',
+      },
+    );
+
+    if (validCuits.length > 0) {
+      findings.push({
+        id: 'valid-cuit-present',
+        severity: 'SAFE',
+        title: 'CUIT oficial verificado (Módulo 11)',
+        detail:
+          'El CUIT informado cumple con la validación matemática y prefijo oficial de ARCA/AFIP.',
+        evidence: validCuits
+          .slice(0, 2)
+          .map((c) => c.formatted)
+          .join(' · '),
+      });
+    }
+
+    const trustScore = clampScoreFromBreakdown(scoreBreakdown);
+    return {
+      url: safeUrl,
+      hostname,
+      pageTitle,
+      isHttps,
+      timestamp: Date.now(),
+      ecommerce,
+      trustScore,
+      scoreBreakdown,
+      riskLevel: isHttps ? 'SAFE' : 'WARNING',
+      pillHeadline: isHttps
+        ? 'Tienda Oficial · Verificá al Vendedor'
+        : 'Precaución · Sitio sin HTTPS',
+      cuits,
+      dataFiscal,
+      findings,
+    };
+  }
+
+  // =========================================================================
+  // BRANCH A3: VERIFIED INTERNATIONAL & CROSS-BORDER COURIER PLATFORMS (100/100)
+  // =========================================================================
+  if (ecommerce.platform === 'ECOMMERCE_INTERNACIONAL') {
+    scoreBreakdown.push({
+      label: 'Base Plataforma Internacional Reconocida',
+      delta: SCORING_WEIGHTS.VERIFIED_INTERNATIONAL_BASE,
+      type: 'base',
+    });
+    if (isHttps) {
+      scoreBreakdown.push({
+        label: 'Conexión cifrada HTTPS',
+        delta: SCORING_WEIGHTS.HTTPS_BONUS,
         type: 'positive',
       });
     } else {
@@ -1168,7 +1138,7 @@ export function auditStoreSecurity(
   }
 
   // =========================================================================
-  // BRANCH B: VERIFIED NATIONAL ARGENTINE RETAILERS, CACE EVENTS & MARKETPLACES (100/100)
+  // BRANCH B: VERIFIED NATIONAL ARGENTINE RETAILERS & CACE EVENTS (100/100)
   // =========================================================================
   if (ecommerce.isWhitelistedOfficial && ecommerce.isEcommerce) {
     const hasLiveFiscalInDom =
@@ -1177,13 +1147,13 @@ export function auditStoreSecurity(
 
     scoreBreakdown.push({
       label: 'Base Comercio Oficial Reconocido',
-      delta: 80,
+      delta: SCORING_WEIGHTS.VERIFIED_OFFICIAL_BASE,
       type: 'base',
     });
     if (isHttps) {
       scoreBreakdown.push({
         label: 'Conexión cifrada HTTPS',
-        delta: 10,
+        delta: SCORING_WEIGHTS.HTTPS_BONUS,
         type: 'positive',
       });
     } else {
@@ -1221,7 +1191,7 @@ export function auditStoreSecurity(
         : 'Comercio oficial argentino verificado',
       detail: isCaceEvent
         ? 'Estás navegando en el portal oficial organizado por la Cámara Argentina de Comercio Electrónico (CACE).'
-        : 'Estás comprando en el dominio auténtico de una cadena, marketplace o comercio oficial reconocido en Argentina.',
+        : 'Estás comprando en el dominio auténtico de una cadena o comercio oficial reconocido en Argentina.',
       evidence: hostname,
     });
 
@@ -1258,7 +1228,7 @@ export function auditStoreSecurity(
       : isCaceEvent
         ? 'Evento Oficial Verificado'
         : validCuits.length > 0
-          ? 'Tienda Verificada · CUIT OK'
+          ? 'Tienda Oficial · CUIT OK'
           : 'Tienda Oficial Verificada';
 
     return {
@@ -1279,18 +1249,18 @@ export function auditStoreSecurity(
   }
 
   // =========================================================================
-  // BRANCH C: VERIFIED GOVERNMENT (.gob.ar) & BANKING PORTALS (100/100)
+  // BRANCH C: VERIFIED GOVERNMENT (.gob.ar) & UNIVERSITY PORTALS (100/100)
   // =========================================================================
   if (ecommerce.isWhitelistedOfficial && !ecommerce.isEcommerce) {
     scoreBreakdown.push({
-      label: 'Base Organismo / Entidad Oficial',
+      label: 'Base Organismo / Institución Oficial',
       delta: 90,
       type: 'base',
     });
     if (isHttps) {
       scoreBreakdown.push({
         label: 'Conexión cifrada HTTPS',
-        delta: 10,
+        delta: SCORING_WEIGHTS.HTTPS_BONUS,
         type: 'positive',
       });
     } else {
@@ -1304,9 +1274,9 @@ export function auditStoreSecurity(
     findings.push({
       id: 'whitelisted-official-institution',
       severity: 'SAFE',
-      title: 'Portal institucional o bancario oficial',
+      title: 'Portal institucional o académico oficial',
       detail:
-        'Estás navegando en el dominio auténtico de una entidad bancaria u organismo oficial argentino.',
+        'Estás navegando en el dominio auténtico de una institución educativa u organismo oficial argentino.',
       evidence: hostname,
     });
 
@@ -1329,26 +1299,28 @@ export function auditStoreSecurity(
   }
 
   // =========================================================================
-  // BRANCH D: GENERAL E-COMMERCE STORES & GENERAL WEBSITES (TRANSPARENT MATH)
+  // BRANCH D: HEURISTIC E-COMMERCE STORES & GENERAL WEBSITES (CAPPED AT 95/100)
   // =========================================================================
   scoreBreakdown.push({
     label: ecommerce.isEcommerce
       ? 'Base inicial comercio online'
       : 'Base inicial sitio web general',
-    delta: ecommerce.isEcommerce ? 60 : 65,
+    delta: ecommerce.isEcommerce
+      ? SCORING_WEIGHTS.HEURISTIC_ECOMMERCE_BASE
+      : SCORING_WEIGHTS.GENERAL_WEBSITE_BASE,
     type: 'base',
   });
 
   if (isHttps) {
     scoreBreakdown.push({
       label: 'Conexión cifrada HTTPS',
-      delta: 10,
+      delta: SCORING_WEIGHTS.HTTPS_BONUS,
       type: 'positive',
     });
   } else {
     scoreBreakdown.push({
       label: 'Conexión insegura sin cifrado HTTPS',
-      delta: -30,
+      delta: SCORING_WEIGHTS.HTTP_PENALTY,
       type: 'negative',
     });
     findings.push({
@@ -1371,7 +1343,7 @@ export function auditStoreSecurity(
   if (isNicArDomain) {
     scoreBreakdown.push({
       label: 'Dominio registrado en NIC Argentina (.ar)',
-      delta: 15,
+      delta: SCORING_WEIGHTS.NIC_AR_DOMAIN_BONUS,
       type: 'positive',
     });
     findings.push({
@@ -1387,7 +1359,7 @@ export function auditStoreSecurity(
   if (dataFiscal.status === 'VERIFIED_OFFICIAL_QR') {
     scoreBreakdown.push({
       label: 'Sello QR Data Fiscal F.960 oficial verificado',
-      delta: 20,
+      delta: SCORING_WEIGHTS.OFFICIAL_QR_F960_BONUS,
       type: 'positive',
     });
     findings.push({
@@ -1405,7 +1377,7 @@ export function auditStoreSecurity(
   if (validCuits.length > 0) {
     scoreBreakdown.push({
       label: 'CUIT válido verificado (Módulo 11)',
-      delta: 15,
+      delta: SCORING_WEIGHTS.VALID_CUIT_MOD11_BONUS,
       type: 'positive',
     });
     findings.push({
@@ -1436,7 +1408,7 @@ export function auditStoreSecurity(
     if (hasContact || hasAddress || hasRazonSocial) {
       scoreBreakdown.push({
         label: 'Datos de contacto / Dirección en pie de página',
-        delta: 10,
+        delta: SCORING_WEIGHTS.FOOTER_CONTACT_LEGAL_BONUS,
         type: 'positive',
       });
     } else {
@@ -1458,7 +1430,7 @@ export function auditStoreSecurity(
     scoreBreakdown.push({
       label:
         'FRAUDE CRÍTICO: Imagen estática falsa de Data Fiscal sin link oficial',
-      delta: -65,
+      delta: SCORING_WEIGHTS.CRITICAL_FORGED_SEAL_PENALTY,
       type: 'negative',
     });
     findings.push({
@@ -1475,7 +1447,7 @@ export function auditStoreSecurity(
     criticalRedFlagsCount++;
     scoreBreakdown.push({
       label: 'FRAUDE CRÍTICO: CUIT inválido que falla Módulo 11',
-      delta: -65,
+      delta: SCORING_WEIGHTS.CRITICAL_INVALID_CUIT_PENALTY,
       type: 'negative',
     });
     const sampleBad = invalidCuits[0];
@@ -1499,7 +1471,7 @@ export function auditStoreSecurity(
     criticalRedFlagsCount++;
     scoreBreakdown.push({
       label: 'Enlaces a redes sociales vacíos o rotos (href="#")',
-      delta: -25,
+      delta: SCORING_WEIGHTS.BROKEN_SOCIAL_LINKS_PENALTY,
       type: 'negative',
     });
     findings.push({
@@ -1523,7 +1495,7 @@ export function auditStoreSecurity(
   ) {
     scoreBreakdown.push({
       label: 'Sin CUIT ni QR F.960 visible en tienda local',
-      delta: -15,
+      delta: SCORING_WEIGHTS.MISSING_FISCAL_DATA_PENALTY,
       type: 'negative',
     });
     findings.push({
@@ -1551,7 +1523,7 @@ export function auditStoreSecurity(
     scoreBreakdown.push({
       label:
         'Subdominio gratuito (.mitiendanube / .myshopify) sin respaldo fiscal',
-      delta: -20,
+      delta: SCORING_WEIGHTS.FREE_SUBDOMAIN_UNVERIFIED_PENALTY,
       type: 'negative',
     });
   }
@@ -1564,7 +1536,7 @@ export function auditStoreSecurity(
     criticalRedFlagsCount++;
     scoreBreakdown.push({
       label: 'Descuentos agresivos solo por transferencia sin respaldo fiscal',
-      delta: -20,
+      delta: SCORING_WEIGHTS.AGGRESSIVE_TRANSFER_DISCOUNT_PENALTY,
       type: 'negative',
     });
     findings.push({
@@ -1591,7 +1563,7 @@ export function auditStoreSecurity(
   ) {
     scoreBreakdown.push({
       label: 'Descuentos agresivos solo por transferencia sin respaldo fiscal',
-      delta: -20,
+      delta: SCORING_WEIGHTS.AGGRESSIVE_TRANSFER_DISCOUNT_PENALTY,
       type: 'negative',
     });
     findings.push({
@@ -1604,15 +1576,32 @@ export function auditStoreSecurity(
     });
   }
 
-  const trustScore = clampScoreFromBreakdown(scoreBreakdown);
+  // Enforce 95/100 cap on non-whitelisted heuristic stores (reserving 100/100 for official registries)
+  const rawTotal = scoreBreakdown.reduce((acc, item) => acc + item.delta, 0);
+  const maxAllowed = ecommerce.isEcommerce
+    ? SCORE_CAPS.MAX_HEURISTIC_STORE_SCORE
+    : SCORE_CAPS.MAX_OFFICIAL_SCORE;
 
-  // Determine semantic RiskLevel & Steamcito-style pill headline
+  if (rawTotal > maxAllowed) {
+    scoreBreakdown.push({
+      label: 'Tope máximo auditoría heurística local (95/100)',
+      delta: maxAllowed - rawTotal,
+      type: 'neutral',
+    });
+  }
+
+  const trustScore = clampScoreFromBreakdown(scoreBreakdown, maxAllowed);
+
   let riskLevel: RiskLevel;
   let pillHeadline: string;
 
   if (criticalRedFlagsCount > 0 || (ecommerce.isEcommerce && trustScore < 35)) {
     riskLevel = 'DANGER';
-    pillHeadline = 'Alerta: Posible Tienda Trucha';
+    pillHeadline =
+      criticalRedFlagsCount === 1 &&
+        dataFiscal.status === 'FORGED_STATIC_SEAL'
+        ? 'Alerta: Sello Fiscal Falsificado'
+        : 'Alerta: Múltiples Señales de Riesgo';
   } else if (!ecommerce.isEcommerce) {
     if (!isHttps) {
       riskLevel = 'WARNING';
@@ -1628,8 +1617,8 @@ export function auditStoreSecurity(
     riskLevel = 'SAFE';
     pillHeadline =
       validCuits.length > 0
-        ? 'Tienda Verificada · CUIT OK'
-        : 'Tienda Verificada · QR Fiscal OK';
+        ? 'Sin Señales de Riesgo · CUIT OK'
+        : 'Sin Señales de Riesgo · QR Fiscal OK';
   } else {
     riskLevel = 'WARNING';
     pillHeadline =

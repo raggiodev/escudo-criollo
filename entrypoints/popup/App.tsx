@@ -13,7 +13,6 @@ import {
   RotateCcw,
   Search,
   Settings,
-  Shield,
   ShieldAlert,
   ShieldCheck,
   Sparkles,
@@ -21,6 +20,8 @@ import {
   Unlock,
 } from 'lucide-react';
 import { browser } from 'wxt/browser';
+import { EscudoCriolloLogo } from '../../src/components/EscudoCriolloLogo';
+import { LEGAL_AUDIT_DISCLAIMER } from '../../src/config/scoring-config';
 import { sanitizeUrl } from '../../src/modules/v01-clean-links/sanitizer';
 import { validateCUIT } from '../../src/modules/v01-cuit-arca/validator';
 import { isRaggiodevCreatorUrl } from '../../src/modules/v01-store-heuristics/detector';
@@ -153,7 +154,7 @@ function buildFallbackUrlReport(rawTabUrl: string): StoreAuditReport | null {
           type: 'base',
         },
         {
-          label: '✨ Sello Oficial Fernando Andres Raggio (Raggiodev)',
+          label: '✨ Sello Oficial Raggiodev',
           delta: 10,
           type: 'positive',
         },
@@ -166,7 +167,7 @@ function buildFallbackUrlReport(rawTabUrl: string): StoreAuditReport | null {
         officialQrUrl: null,
         forgedEvidence: null,
         summary:
-          'Perfil oficial del creador de Escudo Criollo: Fernando Andres Raggio (Raggiodev).',
+          'Perfil oficial del creador de Escudo Criollo: Raggiodev.',
       },
       findings: [
         {
@@ -174,9 +175,9 @@ function buildFallbackUrlReport(rawTabUrl: string): StoreAuditReport | null {
           severity: 'SAFE',
           title: '🟢 ¡Easter Egg encontrado! · Perfil Oficial del Creador',
           detail:
-            '¡Encontraste un secreto oculto de Escudo Criollo! Estás visitando una web o red oficial de su creador: Fernando Andres Raggio (Raggiodev). Nota: este puntaje es un guiño humorístico y de color para la comunidad 😉.',
+            '¡Encontraste un secreto oculto de Escudo Criollo! Estás visitando una web o red oficial de su creador: Raggiodev. Nota: este puntaje es un guiño humorístico y de color para la comunidad 😉.',
           evidence:
-            'Easter Egg Desbloqueado · Desarrollado por Fernando Andres Raggio (Raggiodev)',
+            'Easter Egg Desbloqueado · Desarrollado por Raggiodev',
         },
       ],
     };
@@ -520,7 +521,7 @@ export const App: React.FC = () => {
                 borderColor: 'rgba(251, 191, 36, 0.6)',
               }}
             >
-              <Shield className="h-5 w-5 text-raggio-gold" aria-hidden="true" />
+              <EscudoCriolloLogo size={26} />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
@@ -535,7 +536,7 @@ export const App: React.FC = () => {
                     border: '1px solid rgba(251, 191, 36, 0.4)',
                   }}
                 >
-                  v0.1.5
+                  v0.2.0
                 </span>
               </div>
               <p className="text-2xs text-indigo-100/90 m-0 mt-0.5">
@@ -586,11 +587,10 @@ export const App: React.FC = () => {
             tabIndex={activeTab === 'scanner' ? 0 : -1}
             onClick={() => setActiveTab('scanner')}
             onKeyDown={(e) => handleTabKeyDown(e, 'scanner')}
-            className={`flex items-center justify-center gap-1.5 rounded-t-lg border-b-2 px-2 py-2 text-xs font-semibold transition-colors min-h-[36px] ${
-              activeTab === 'scanner'
-                ? 'border-raggio-gold bg-raggio-canvas text-raggio-gold'
-                : 'border-transparent text-slate-400 hover:bg-raggio-hover hover:text-slate-200'
-            }`}
+            className={`flex items-center justify-center gap-1.5 rounded-t-lg border-b-2 px-2 py-2 text-xs font-semibold transition-colors min-h-[36px] ${activeTab === 'scanner'
+              ? 'border-raggio-gold bg-raggio-canvas text-raggio-gold'
+              : 'border-transparent text-slate-400 hover:bg-raggio-hover hover:text-slate-200'
+              }`}
           >
             <ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>Escáner</span>
@@ -608,11 +608,10 @@ export const App: React.FC = () => {
             tabIndex={activeTab === 'manual' ? 0 : -1}
             onClick={() => setActiveTab('manual')}
             onKeyDown={(e) => handleTabKeyDown(e, 'manual')}
-            className={`flex items-center justify-center gap-1.5 rounded-t-lg border-b-2 px-2 py-2 text-xs font-semibold transition-colors min-h-[36px] ${
-              activeTab === 'manual'
-                ? 'border-raggio-gold bg-raggio-canvas text-raggio-gold'
-                : 'border-transparent text-slate-400 hover:bg-raggio-hover hover:text-slate-200'
-            }`}
+            className={`flex items-center justify-center gap-1.5 rounded-t-lg border-b-2 px-2 py-2 text-xs font-semibold transition-colors min-h-[36px] ${activeTab === 'manual'
+              ? 'border-raggio-gold bg-raggio-canvas text-raggio-gold'
+              : 'border-transparent text-slate-400 hover:bg-raggio-hover hover:text-slate-200'
+              }`}
           >
             <Search className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>Auditor Manual</span>
@@ -630,11 +629,10 @@ export const App: React.FC = () => {
             tabIndex={activeTab === 'settings' ? 0 : -1}
             onClick={() => setActiveTab('settings')}
             onKeyDown={(e) => handleTabKeyDown(e, 'settings')}
-            className={`flex items-center justify-center gap-1.5 rounded-t-lg border-b-2 px-2 py-2 text-xs font-semibold transition-colors min-h-[36px] ${
-              activeTab === 'settings'
-                ? 'border-raggio-gold bg-raggio-canvas text-raggio-gold'
-                : 'border-transparent text-slate-400 hover:bg-raggio-hover hover:text-slate-200'
-            }`}
+            className={`flex items-center justify-center gap-1.5 rounded-t-lg border-b-2 px-2 py-2 text-xs font-semibold transition-colors min-h-[36px] ${activeTab === 'settings'
+              ? 'border-raggio-gold bg-raggio-canvas text-raggio-gold'
+              : 'border-transparent text-slate-400 hover:bg-raggio-hover hover:text-slate-200'
+              }`}
           >
             <Settings className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>Ajustes</span>
@@ -750,15 +748,15 @@ export const App: React.FC = () => {
                           style={
                             report.ecommerce.platform === 'RAGGIODEV_HQ'
                               ? {
-                                  color: '#34D399',
-                                  backgroundColor: 'rgba(6, 78, 59, 0.75)',
-                                  borderColor: '#10B981',
-                                }
+                                color: '#34D399',
+                                backgroundColor: 'rgba(6, 78, 59, 0.75)',
+                                borderColor: '#10B981',
+                              }
                               : {
-                                  color: '#FBBF24',
-                                  backgroundColor: '#1F193D',
-                                  borderColor: '#2B2354',
-                                }
+                                color: '#FBBF24',
+                                backgroundColor: '#1F193D',
+                                borderColor: '#2B2354',
+                              }
                           }
                         >
                           {report.ecommerce.platformLabel}
@@ -894,130 +892,145 @@ export const App: React.FC = () => {
                 {/* CUIT & Data Fiscal ARCA Card (shown on Argentine/local sites) */}
                 {report.ecommerce.platform !== 'ECOMMERCE_INTERNACIONAL' &&
                   report.ecommerce.platform !== 'RAGGIODEV_HQ' && (
-                  <section
-                    aria-label="Estado fiscal CUIT y ARCA"
-                    className="rounded-2xl border border-raggio-border bg-raggio-card p-3 space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-2xs font-bold uppercase tracking-wider text-slate-400 m-0">
-                        Identidad Fiscal (CUIT &amp; ARCA)
-                      </h2>
-                      <a
-                        href={BCRA_DEUDORES_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-2xs font-semibold text-raggio-gold hover:underline min-h-[24px]"
-                      >
-                        <span>Central de Deudores BCRA</span>
-                        <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                      </a>
-                    </div>
+                    <section
+                      aria-label="Estado fiscal CUIT y ARCA"
+                      className="rounded-2xl border border-raggio-border bg-raggio-card p-3 space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-2xs font-bold uppercase tracking-wider text-slate-400 m-0">
+                          Identidad Fiscal (CUIT &amp; ARCA)
+                        </h2>
+                        <a
+                          href={BCRA_DEUDORES_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-2xs font-semibold text-raggio-gold hover:underline min-h-[24px]"
+                        >
+                          <span>Central de Deudores BCRA</span>
+                          <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                        </a>
+                      </div>
 
-                    {report.cuits.length > 0 ? (
-                      <div className="space-y-1.5">
-                        {report.cuits.slice(0, 3).map((cuit) => (
-                          <div
-                            key={cuit.digits}
-                            className="flex items-center justify-between gap-2 rounded-xl border border-raggio-border bg-raggio-canvas px-2.5 py-2"
-                          >
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span
-                                  className="font-mono text-xs font-bold"
-                                  style={{
-                                    color: cuit.isValid ? '#34D399' : '#F87171',
-                                  }}
-                                >
-                                  {cuit.formatted}
-                                </span>
-                                <span
-                                  className="rounded border px-1.5 py-0.5 font-mono text-2xs font-bold"
-                                  style={
-                                    cuit.isValid
-                                      ? {
+                      {report.cuits.length > 0 ? (
+                        <div className="space-y-1.5">
+                          {report.cuits.slice(0, 3).map((cuit) => (
+                            <div
+                              key={cuit.digits}
+                              className="flex items-center justify-between gap-2 rounded-xl border border-raggio-border bg-raggio-canvas px-2.5 py-2"
+                            >
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span
+                                    className="font-mono text-xs font-bold"
+                                    style={{
+                                      color: cuit.isValid ? '#34D399' : '#F87171',
+                                    }}
+                                  >
+                                    {cuit.formatted}
+                                  </span>
+                                  <span
+                                    className="rounded border px-1.5 py-0.5 font-mono text-2xs font-bold"
+                                    style={
+                                      cuit.isValid
+                                        ? {
                                           color: '#34D399',
                                           backgroundColor:
                                             'rgba(6, 78, 59, 0.65)',
                                           borderColor: '#10B981',
                                         }
-                                      : {
+                                        : {
                                           color: '#F87171',
                                           backgroundColor:
                                             'rgba(69, 10, 10, 0.75)',
                                           borderColor: '#EF4444',
                                         }
-                                  }
-                                >
-                                  {cuit.isValid ? 'VÁLIDO' : 'TRUCHO'}
-                                </span>
+                                    }
+                                  >
+                                    {cuit.isValid ? 'VÁLIDO' : 'TRUCHO'}
+                                  </span>
+                                </div>
+                                <p className="text-2xs text-slate-400 m-0 mt-0.5 truncate">
+                                  {cuit.entityLabel}
+                                </p>
                               </div>
-                              <p className="text-2xs text-slate-400 m-0 mt-0.5 truncate">
-                                {cuit.entityLabel}
-                              </p>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void triggerCopyFeedback(
+                                    `cuit-${cuit.digits}`,
+                                    cuit.formatted,
+                                    `CUIT ${cuit.formatted} copiado.`,
+                                  )
+                                }
+                                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-raggio-border bg-raggio-hover px-2 py-1 text-2xs font-semibold text-slate-200 hover:border-raggio-gold hover:text-raggio-gold min-h-[28px]"
+                              >
+                                {copiedKey === `cuit-${cuit.digits}` ? (
+                                  <>
+                                    <Check
+                                      className="h-3 w-3 text-semaphore-safeText"
+                                      aria-hidden="true"
+                                    />
+                                    <span>Copiado</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="h-3 w-3" aria-hidden="true" />
+                                    <span>Copiar</span>
+                                  </>
+                                )}
+                              </button>
                             </div>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                void triggerCopyFeedback(
-                                  `cuit-${cuit.digits}`,
-                                  cuit.formatted,
-                                  `CUIT ${cuit.formatted} copiado.`,
-                                )
-                              }
-                              className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-raggio-border bg-raggio-hover px-2 py-1 text-2xs font-semibold text-slate-200 hover:border-raggio-gold hover:text-raggio-gold min-h-[28px]"
-                            >
-                              {copiedKey === `cuit-${cuit.digits}` ? (
-                                <>
-                                  <Check
-                                    className="h-3 w-3 text-semaphore-safeText"
-                                    aria-hidden="true"
-                                  />
-                                  <span>Copiado</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="h-3 w-3" aria-hidden="true" />
-                                  <span>Copiar</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="rounded-xl border border-raggio-border bg-raggio-canvas px-3 py-2 font-mono text-2xs text-slate-400">
-                        No se detectó ningún CUIT en la vista actual.
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between pt-1 text-xs">
-                      <span className="text-slate-400 text-2xs">
-                        Data Fiscal F.960:
-                      </span>
-                      {report.dataFiscal.status === 'VERIFIED_OFFICIAL_QR' &&
-                      report.dataFiscal.officialQrUrl ? (
-                        <a
-                          href={report.dataFiscal.officialQrUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 font-mono text-2xs font-bold text-semaphore-safeText hover:underline min-h-[24px]"
-                        >
-                          <span>🟢 QR Oficial Verificado</span>
-                          <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                        </a>
-                      ) : report.dataFiscal.status === 'FORGED_STATIC_SEAL' ? (
-                        <span className="font-mono text-2xs font-bold text-semaphore-dangerText">
-                          🔴 Sello Estático / Falsificado
-                        </span>
+                          ))}
+                        </div>
                       ) : (
-                        <span className="font-mono text-2xs text-slate-400">
-                          No detectado en vista actual
-                        </span>
+                        <div className="rounded-xl border border-raggio-border bg-raggio-canvas px-3 py-2 font-mono text-2xs text-slate-400">
+                          No se detectó ningún CUIT en la vista actual.
+                        </div>
                       )}
-                    </div>
-                  </section>
-                )}
+
+                      <div className="space-y-1 pt-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-400 text-2xs">
+                            {report.ecommerce.platform === 'ENTIDAD_FINANCIERA'
+                              ? 'Supervisión:'
+                              : 'Data Fiscal F.960:'}
+                          </span>
+                          {report.ecommerce.platform === 'ENTIDAD_FINANCIERA' ? (
+                            <span className="font-mono text-2xs font-bold text-semaphore-safeText">
+                              Entidad regulada por BCRA / CNV
+                            </span>
+                          ) : report.dataFiscal.status ===
+                            'VERIFIED_OFFICIAL_QR' &&
+                            report.dataFiscal.officialQrUrl ? (
+                            <a
+                              href={report.dataFiscal.officialQrUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 rounded-md border border-semaphore-safeBorder bg-semaphore-safeBg px-2 py-0.5 font-mono text-2xs font-bold text-semaphore-safeText hover:underline min-h-[24px]"
+                            >
+                              <span>🏛️ Verificar Ficha en ARCA ↗</span>
+                            </a>
+                          ) : report.dataFiscal.status ===
+                            'FORGED_STATIC_SEAL' ? (
+                            <span className="font-mono text-2xs font-bold text-semaphore-dangerText">
+                              🔴 Sello Estático / Falsificado
+                            </span>
+                          ) : (
+                            <span className="font-mono text-2xs text-slate-400">
+                              No detectado en vista actual
+                            </span>
+                          )}
+                        </div>
+                        {report.dataFiscal.status === 'VERIFIED_OFFICIAL_QR' &&
+                          report.dataFiscal.officialQrUrl && (
+                            <p className="text-2xs text-slate-400 m-0 leading-snug">
+                              Confirmá que la Razón Social en ARCA coincida con esta tienda.
+                            </p>
+                          )}
+                      </div>
+                    </section>
+                  )}
 
                 {/* Detailed Findings */}
                 <section aria-label="Hallazgos detallados">
@@ -1061,6 +1074,9 @@ export const App: React.FC = () => {
                       </li>
                     ))}
                   </ul>
+                  <p className="mt-2.5 text-2xs text-slate-400 m-0 leading-snug">
+                    {LEGAL_AUDIT_DISCLAIMER}
+                  </p>
                 </section>
               </>
             )}
@@ -1140,13 +1156,13 @@ export const App: React.FC = () => {
                   style={
                     manualCuitResult.isValid
                       ? {
-                          backgroundColor: 'rgba(6, 78, 59, 0.35)',
-                          borderColor: '#10B981',
-                        }
+                        backgroundColor: 'rgba(6, 78, 59, 0.35)',
+                        borderColor: '#10B981',
+                      }
                       : {
-                          backgroundColor: 'rgba(69, 10, 10, 0.45)',
-                          borderColor: '#EF4444',
-                        }
+                        backgroundColor: 'rgba(69, 10, 10, 0.45)',
+                        borderColor: '#EF4444',
+                      }
                   }
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -1285,11 +1301,10 @@ export const App: React.FC = () => {
                       <div className="flex items-center justify-between">
                         <span className="text-2xs font-semibold text-slate-300">
                           {manualSanitizeResult.removedCount > 0
-                            ? `🧹 ${manualSanitizeResult.removedCount} ${
-                                manualSanitizeResult.removedCount === 1
-                                  ? 'rastreador eliminado'
-                                  : 'rastreadores eliminados'
-                              }:`
+                            ? `🧹 ${manualSanitizeResult.removedCount} ${manualSanitizeResult.removedCount === 1
+                              ? 'rastreador eliminado'
+                              : 'rastreadores eliminados'
+                            }:`
                             : '✨ Enlace limpio (0 rastreadores detectados)'}
                         </span>
                       </div>
@@ -1529,18 +1544,16 @@ export const App: React.FC = () => {
                       showFloatingBadge: !settings.showFloatingBadge,
                     })
                   }
-                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${
-                    settings.showFloatingBadge
-                      ? 'border-raggio-gold bg-raggio-violet'
-                      : 'border-raggio-border bg-raggio-canvas'
-                  }`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${settings.showFloatingBadge
+                    ? 'border-raggio-gold bg-raggio-violet'
+                    : 'border-raggio-border bg-raggio-canvas'
+                    }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
-                      settings.showFloatingBadge
-                        ? 'translate-x-5 bg-raggio-goldLight'
-                        : 'translate-x-1'
-                    }`}
+                    className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${settings.showFloatingBadge
+                      ? 'translate-x-5 bg-raggio-goldLight'
+                      : 'translate-x-1'
+                      }`}
                   />
                 </button>
               </div>
@@ -1570,18 +1583,16 @@ export const App: React.FC = () => {
                       alwaysShowBadge: !settings.alwaysShowBadge,
                     })
                   }
-                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${
-                    settings.alwaysShowBadge
-                      ? 'border-raggio-gold bg-raggio-violet'
-                      : 'border-raggio-border bg-raggio-canvas'
-                  }`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${settings.alwaysShowBadge
+                    ? 'border-raggio-gold bg-raggio-violet'
+                    : 'border-raggio-border bg-raggio-canvas'
+                    }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
-                      settings.alwaysShowBadge
-                        ? 'translate-x-5 bg-raggio-goldLight'
-                        : 'translate-x-1'
-                    }`}
+                    className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${settings.alwaysShowBadge
+                      ? 'translate-x-5 bg-raggio-goldLight'
+                      : 'translate-x-1'
+                      }`}
                   />
                 </button>
               </div>
@@ -1611,18 +1622,16 @@ export const App: React.FC = () => {
                       autoCleanCopiedLinks: !settings.autoCleanCopiedLinks,
                     })
                   }
-                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${
-                    settings.autoCleanCopiedLinks
-                      ? 'border-raggio-gold bg-raggio-violet'
-                      : 'border-raggio-border bg-raggio-canvas'
-                  }`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${settings.autoCleanCopiedLinks
+                    ? 'border-raggio-gold bg-raggio-violet'
+                    : 'border-raggio-border bg-raggio-canvas'
+                    }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
-                      settings.autoCleanCopiedLinks
-                        ? 'translate-x-5 bg-raggio-goldLight'
-                        : 'translate-x-1'
-                    }`}
+                    className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${settings.autoCleanCopiedLinks
+                      ? 'translate-x-5 bg-raggio-goldLight'
+                      : 'translate-x-1'
+                      }`}
                   />
                 </button>
               </div>
@@ -1641,11 +1650,10 @@ export const App: React.FC = () => {
                     onClick={() =>
                       void handleUpdateSetting({ badgePosition: 'bottom-left' })
                     }
-                    className={`rounded-xl border px-3 py-2 text-xs font-semibold transition-colors min-h-[34px] ${
-                      settings.badgePosition === 'bottom-left'
-                        ? 'border-raggio-gold bg-raggio-hover text-raggio-gold'
-                        : 'border-raggio-border bg-raggio-canvas text-slate-300 hover:bg-raggio-hover'
-                    }`}
+                    className={`rounded-xl border px-3 py-2 text-xs font-semibold transition-colors min-h-[34px] ${settings.badgePosition === 'bottom-left'
+                      ? 'border-raggio-gold bg-raggio-hover text-raggio-gold'
+                      : 'border-raggio-border bg-raggio-canvas text-slate-300 hover:bg-raggio-hover'
+                      }`}
                   >
                     ↙ Abajo Izquierda
                   </button>
@@ -1655,11 +1663,10 @@ export const App: React.FC = () => {
                     onClick={() =>
                       void handleUpdateSetting({ badgePosition: 'bottom-right' })
                     }
-                    className={`rounded-xl border px-3 py-2 text-xs font-semibold transition-colors min-h-[34px] ${
-                      settings.badgePosition === 'bottom-right'
-                        ? 'border-raggio-gold bg-raggio-hover text-raggio-gold'
-                        : 'border-raggio-border bg-raggio-canvas text-slate-300 hover:bg-raggio-hover'
-                    }`}
+                    className={`rounded-xl border px-3 py-2 text-xs font-semibold transition-colors min-h-[34px] ${settings.badgePosition === 'bottom-right'
+                      ? 'border-raggio-gold bg-raggio-hover text-raggio-gold'
+                      : 'border-raggio-border bg-raggio-canvas text-slate-300 hover:bg-raggio-hover'
+                      }`}
                   >
                     ↘ Abajo Derecha
                   </button>
@@ -1711,7 +1718,7 @@ export const App: React.FC = () => {
       {/* Raggiodev Signature Footer */}
       <footer className="border-t border-raggio-border bg-raggio-card px-3.5 py-2.5 text-center">
         <div className="text-2xs text-slate-300">
-          <span className="font-mono font-semibold">Escudo Criollo v0.1.5</span>{' '}
+          <span className="font-mono font-semibold">Escudo Criollo v0.2.0</span>{' '}
           · Desarrollado por{' '}
           <a
             href={RAGGIODEV_PORTFOLIO_URL}

@@ -5,14 +5,20 @@ export default defineConfig({
   manifest: {
     name: 'Escudo Criollo (by Raggiodev)',
     short_name: 'Escudo Criollo',
-    version: '0.1.5',
+    version: '0.2.0',
     description:
       'Escudo 100% local contra tiendas online truchas: valida CUIT (Módulo 11), QR Data Fiscal ARCA/AFIP y limpia links.',
     author: {
       email: 'contact@raggiodev.com',
     },
-    homepage_url: 'https://github.com/raggiodev/escudo-criollo',
+    homepage_url: 'https://escudo-criollo.raggiodev.com',
     permissions: ['storage', 'contextMenus', 'activeTab'],
+    browser_specific_settings: {
+      gecko: {
+        id: 'escudo-criollo@raggiodev.com',
+        strict_min_version: '109.0',
+      },
+    },
     icons: {
       16: 'icon/16.png',
       32: 'icon/32.png',
