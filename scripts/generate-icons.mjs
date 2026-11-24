@@ -7,8 +7,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ICON_DIR = path.resolve(__dirname, '..', 'public', 'icon');
 const DOCS_DIR = path.resolve(__dirname, '..', 'docs');
+const OUTPUT_DIR = path.resolve(__dirname, '..', '.output');
 
 const SIZES = [16, 32, 48, 96, 128];
+const EDGE_LOGO_SIZE = 300;
 
 // Precompute IEEE 802.3 CRC32 table for valid PNG chunk checksums
 const CRC_TABLE = new Uint32Array(256);
@@ -348,21 +350,34 @@ function generateIcon(size) {
   return encodeRgbaToPng(size, size, rgba);
 }
 
-fs.mkdirSync(ICON_DIR, { recursive: true });
-fs.mkdirSync(DOCS_DIR, { recursive: true });
+const cliArgs = new Set(process.argv.slice(2));
+const isEdgeLogoOnly = cliArgs.has('--edge-logo') || cliArgs.has('--edge-only');
 
-for (const size of SIZES) {
-  const pngBuffer = generateIcon(size);
-  const outPath = path.join(ICON_DIR, `${size}.png`);
-  fs.writeFileSync(outPath, pngBuffer);
+if (isEdgeLogoOnly) {
+  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  const edgeBuffer = generateIcon(EDGE_LOGO_SIZE);
+  const edgeOutPath = path.join(OUTPUT_DIR, 'edge-logo-300.png');
+  fs.writeFileSync(edgeOutPath, edgeBuffer);
   console.log(
-    `[Escudo Criollo v0.2.0] Icono Mate+Bandera generado: public/icon/${size}.png (${size}x${size}px, ${pngBuffer.length} bytes)`,
+    `[Escudo Criollo v0.2.0] Logo Microsoft Edge Add-ons generado: .output/edge-logo-300.png (${EDGE_LOGO_SIZE}x${EDGE_LOGO_SIZE}px, ${edgeBuffer.length} bytes)`,
   );
-  if (size === 128) {
-    const faviconPath = path.join(DOCS_DIR, 'favicon.png');
-    fs.writeFileSync(faviconPath, pngBuffer);
+} else {
+  fs.mkdirSync(ICON_DIR, { recursive: true });
+  fs.mkdirSync(DOCS_DIR, { recursive: true });
+
+  for (const size of SIZES) {
+    const pngBuffer = generateIcon(size);
+    const outPath = path.join(ICON_DIR, `${size}.png`);
+    fs.writeFileSync(outPath, pngBuffer);
     console.log(
-      `[Escudo Criollo v0.2.0] Favicon web actualizado: docs/favicon.png (${pngBuffer.length} bytes)`,
+      `[Escudo Criollo v0.2.0] Icono Mate+Bandera generado: public/icon/${size}.png (${size}x${size}px, ${pngBuffer.length} bytes)`,
     );
+    if (size === 128) {
+      const faviconPath = path.join(DOCS_DIR, 'favicon.png');
+      fs.writeFileSync(faviconPath, pngBuffer);
+      console.log(
+        `[Escudo Criollo v0.2.0] Favicon web actualizado: docs/favicon.png (${pngBuffer.length} bytes)`,
+      );
+    }
   }
 }

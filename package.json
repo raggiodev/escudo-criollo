@@ -17,6 +17,7 @@
     "zip:all": "node -e \"const {execSync}=require('node:child_process');['zip','zip:edge','zip:firefox'].forEach(s=>execSync('npm run '+s,{stdio:'inherit'}))\"",
     "compile": "tsc --noEmit",
     "icons": "node scripts/generate-icons.mjs",
+    "icons:edge": "node scripts/generate-icons.mjs --edge-logo",
     "verify": "tsx scripts/verify-core.ts",
     "postinstall": "wxt prepare"
   },
